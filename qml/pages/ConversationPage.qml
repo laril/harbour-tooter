@@ -809,6 +809,14 @@ Page {
                                    "params": { },
                                    "conf": Logic.conf
                                })
+            // Fetch remote replies in background (Mastodon 4.5+, silently ignored if unsupported)
+            worker.sendMessage({
+                                   "action": 'statuses/' + mdl.get(0).status_id + '/fetch_remote_replies',
+                                   "method": 'POST',
+                                   "model": mdl,
+                                   "params": {},
+                                   "conf": Logic.conf
+                               })
         } else if (status_id && status_id.length > 0) {
             // Model is empty but we have a status_id - fetch the status first
             console.log("Fetching status: " + status_id)
@@ -826,6 +834,14 @@ Page {
                                    "method": 'GET',
                                    "model": mdl,
                                    "params": { },
+                                   "conf": Logic.conf
+                               })
+            // Fetch remote replies in background (Mastodon 4.5+, silently ignored if unsupported)
+            worker.sendMessage({
+                                   "action": 'statuses/' + status_id + '/fetch_remote_replies',
+                                   "method": 'POST',
+                                   "model": mdl,
+                                   "params": {},
                                    "conf": Logic.conf
                                })
         }

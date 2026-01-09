@@ -82,9 +82,51 @@ BackgroundItem {
         }
     }
 
-    // Account avatar
+    // Stacked avatars for grouped notifications (v2 API)
+    Row {
+        id: stackedAvatars
+        visible: typeof model.notifications_count !== "undefined" && model.notifications_count > 1 && typeof model.grouped_account_count !== "undefined" && model.grouped_account_count > 1
+        spacing: -Theme.paddingSmall * 1.5  // Negative spacing for overlap
+        anchors {
+            top: miniStatus.visible ? miniStatus.bottom : parent.top
+            topMargin: miniStatus.visible ? Theme.paddingMedium : Theme.paddingLarge
+            left: parent.left
+            leftMargin: Theme.horizontalPageMargin
+        }
+
+        Image {
+            visible: typeof model.grouped_account_avatar_0 !== "undefined"
+            width: Theme.iconSizeSmall
+            height: width
+            source: typeof model.grouped_account_avatar_0 !== "undefined" ? model.grouped_account_avatar_0 : ""
+            asynchronous: true
+            smooth: true
+            z: 3
+        }
+        Image {
+            visible: typeof model.grouped_account_avatar_1 !== "undefined" && model.grouped_account_count >= 2
+            width: Theme.iconSizeSmall
+            height: width
+            source: typeof model.grouped_account_avatar_1 !== "undefined" ? model.grouped_account_avatar_1 : ""
+            asynchronous: true
+            smooth: true
+            z: 2
+        }
+        Image {
+            visible: typeof model.grouped_account_avatar_2 !== "undefined" && model.grouped_account_count >= 3
+            width: Theme.iconSizeSmall
+            height: width
+            source: typeof model.grouped_account_avatar_2 !== "undefined" ? model.grouped_account_avatar_2 : ""
+            asynchronous: true
+            smooth: true
+            z: 1
+        }
+    }
+
+    // Account avatar (hidden when showing stacked avatars)
     Image {
         id: avatar
+        visible: !stackedAvatars.visible
         opacity: status === Image.Ready ? 1.0 : 0.0
         Behavior on opacity { FadeAnimator {} }
         asynchronous: true
@@ -199,8 +241,8 @@ BackgroundItem {
     MiniHeader {
         id: miniHeader
         anchors {
-            top: avatar.top
-            left: avatar.right
+            top: stackedAvatars.visible ? stackedAvatars.top : avatar.top
+            left: stackedAvatars.visible ? stackedAvatars.right : avatar.right
             right: parent.right
         }
     }

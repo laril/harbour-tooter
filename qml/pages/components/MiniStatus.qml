@@ -43,7 +43,15 @@ Item {
                 miniStatus.visible = false
                 action = type;
             }
-            return typeof reblog_account_username !== "undefined" ? '@' + reblog_account_username + " " +  action : " "
+            if (typeof reblog_account_username === "undefined") {
+                return " "
+            }
+            // Handle grouped notifications (v2 API)
+            if (typeof notifications_count !== "undefined" && notifications_count > 1) {
+                var others = notifications_count - 1
+                return '@' + reblog_account_username + " " + qsTr('and %n other(s)', '', others) + " " + action
+            }
+            return '@' + reblog_account_username + " " + action
         }
         font.pixelSize: Theme.fontSizeExtraSmall
         color: Theme.highlightColor

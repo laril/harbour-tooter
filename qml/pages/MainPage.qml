@@ -66,7 +66,7 @@ Page {
         MyList {
             id: tlNotifications
             title: qsTr("Notifications")
-            type: "notifications"
+            type: "v2/notifications"
             notifier: true
             mdl: Logic.modelTLnotifications
             width: isPortrait ? parent.itemWidth : parent.itemWidth - Theme.itemSizeLarge

@@ -101,9 +101,12 @@ var mastodonAPI = function(config) {
             //queryStringAppend += "limit=20"
             // ajax function
             var http = new XMLHttpRequest()
-            var url = apiBase + endpoint;
-            console.log(apiBase + endpoint + queryStringAppend)
-            http.open("GET", apiBase + endpoint + queryStringAppend, true);
+            // Support v2 endpoints by checking prefix
+            var url = endpoint.indexOf("v2/") === 0
+                ? config.instance + "/api/" + endpoint
+                : apiBase + endpoint;
+            console.log(url + queryStringAppend)
+            http.open("GET", url + queryStringAppend, true);
 
             // Send the proper header information along with the request
             http.setRequestHeader("Authorization", "Bearer " + config.api_user_token);

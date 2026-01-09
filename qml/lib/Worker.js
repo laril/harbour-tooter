@@ -123,6 +123,36 @@ WorkerScript.onMessage = function(msg) {
                     msg.model.sync();
                 }
 
+            } else if (msg.action.indexOf('fetch_remote_replies') > -1) {
+                // Fetch remote replies completed - re-fetch context to get new replies
+                var match = msg.action.match(/statuses\/([^\/]+)\/fetch_remote_replies/)
+                if (match && match[1] && msg.model) {
+                    console.log("fetch_remote_replies completed, re-fetching context for: " + match[1])
+                    API.get('statuses/' + match[1] + '/context', [], function(contextData) {
+                        // Process ancestors and descendants
+                        if (contextData) {
+                            var items = []
+                            var item
+                            // Process descendants only (new replies) - append to model
+                            if (contextData["descendants"] && contextData["descendants"].length > 0) {
+                                for (var j = 0; j < contextData["descendants"].length; j++) {
+                                    if (contextData["descendants"][j]) {
+                                        item = parseToot(contextData["descendants"][j]);
+                                        item['id'] = item['status_id'];
+                                        if (typeof item['attachments'] === "undefined")
+                                            item['attachments'] = [];
+                                        items.push(item);
+                                    }
+                                }
+                                if (items.length > 0) {
+                                    addDataToModel(msg.model, "append", items);
+                                    console.log("Added " + items.length + " replies from remote fetch")
+                                }
+                            }
+                        }
+                    });
+                }
+
             } else {
                 for (var i in data) {
                     if (data.hasOwnProperty(i)) {
@@ -171,8 +201,35 @@ WorkerScript.onMessage = function(msg) {
 
                     items.push(item)
 
+                } else if(msg.action === "v2/notifications" && i === "notification_groups") {
+                    // v2 grouped notifications
+                    console.log("Parsing v2 grouped notifications: " + data[i].length + " groups")
+                    var accountsMap = {}
+                    var statusesMap = {}
+
+                    // Build lookup maps from the accounts and statuses arrays
+                    if (data["accounts"]) {
+                        for (var a = 0; a < data["accounts"].length; a++) {
+                            accountsMap[data["accounts"][a].id] = data["accounts"][a]
+                        }
+                    }
+                    if (data["statuses"]) {
+                        for (var s = 0; s < data["statuses"].length; s++) {
+                            statusesMap[data["statuses"][s].id] = data["statuses"][s]
+                        }
+                    }
+
+                    // Parse each notification group
+                    for (var g = 0; g < data[i].length; g++) {
+                        var group = data[i][g]
+                        item = parseGroupedNotification(group, accountsMap, statusesMap)
+                        if (item) {
+                            items.push(item)
+                        }
+                    }
+
                 } else if(msg.action === "notifications") {
-                    // notification
+                    // v1 notification (fallback)
                     //console.log("Get notification list")
                     //console.log(JSON.stringify(data[i]))
                     item = parseNotification(data[i]);
@@ -377,6 +434,106 @@ function parseNotification(data){
     item['created_at'] =  new Date(data.created_at)
     item['section'] =  getDate(data["created_at"])
     return item;
+}
+
+/** Function: Parse v2 Grouped Notification */
+function parseGroupedNotification(group, accountsMap, statusesMap) {
+    var item = {
+        id: group.group_key,
+        type: group.type,
+        attachments: [],
+        notifications_count: group.notifications_count || 1
+    };
+
+    // Get sample accounts for stacked avatar display (stored as indexed properties for ListModel compatibility)
+    var groupedData = {
+        grouped_account_count: 0
+    }
+    if (group.sample_account_ids) {
+        for (var i = 0; i < group.sample_account_ids.length && i < 3; i++) {
+            var acc = accountsMap[group.sample_account_ids[i]]
+            if (acc) {
+                groupedData['grouped_account_avatar_' + i] = acc.avatar
+                groupedData['grouped_account_acct_' + i] = acc.acct
+                groupedData['grouped_account_display_name_' + i] = acc.display_name
+                groupedData['grouped_account_id_' + i] = acc.id
+                groupedData.grouped_account_count++
+            }
+        }
+    }
+
+    // Get the first account for reblog_account_* fields (for MiniStatus display)
+    var firstAccount = groupedData.grouped_account_count > 0 ? accountsMap[group.sample_account_ids[0]] : null
+
+    switch (group.type) {
+    case "mention":
+        if (!group.status_id || !statusesMap[group.status_id]) {
+            return null
+        }
+        item = parseToot(statusesMap[group.status_id])
+        item['typeIcon'] = "image://theme/icon-s-alarm"
+        item['type'] = "mention"
+        break;
+
+    case "reblog":
+        if (!group.status_id || !statusesMap[group.status_id]) {
+            return null
+        }
+        var statusData = statusesMap[group.status_id]
+        item = parseToot(statusData)
+        if (firstAccount) {
+            item = parseAccounts(item, "reblog_", firstAccount)
+        }
+        if (statusData.account) {
+            item = parseAccounts(item, "", statusData.account)
+        }
+        item['status_reblog'] = true
+        item['type'] = "reblog"
+        item['typeIcon'] = "image://theme/icon-s-retweet"
+        break;
+
+    case "favourite":
+        if (!group.status_id || !statusesMap[group.status_id]) {
+            return null
+        }
+        var statusData2 = statusesMap[group.status_id]
+        item = parseToot(statusData2)
+        if (firstAccount) {
+            item = parseAccounts(item, "reblog_", firstAccount)
+        }
+        if (statusData2.account) {
+            item = parseAccounts(item, "", statusData2.account)
+        }
+        item['status_reblog'] = true
+        item['type'] = "favourite"
+        item['typeIcon'] = "image://theme/icon-s-favorite"
+        break;
+
+    case "follow":
+        item['type'] = "follow"
+        if (firstAccount) {
+            item = parseAccounts(item, "", firstAccount)
+            item = parseAccounts(item, "reblog_", firstAccount)
+        }
+        item['typeIcon'] = "../../images/icon-s-follow.svg"
+        break;
+
+    default:
+        item['typeIcon'] = "image://theme/icon-s-sailfish"
+    }
+
+    // Apply common fields after switch (since parseToot replaces item)
+    item['id'] = group.group_key
+    item['created_at'] = new Date(group.latest_page_notification_at)
+    item['section'] = getDate(group.latest_page_notification_at)
+    item['notifications_count'] = group.notifications_count || 1
+
+    // Apply grouped account data
+    for (var key in groupedData) {
+        item[key] = groupedData[key]
+    }
+
+    return item
 }
 
 /** Function: */
