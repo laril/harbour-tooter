@@ -695,16 +695,17 @@ function parseToot (data) {
     /** Remove "RE:" quote link prefix when we have a proper quote */
     if (item['quote_id'] && item['quote_id'].length > 0) {
         // Remove the "RE: <link>" that Mastodon adds as fallback
-        // Pattern 1: <p>RE: <a href="...">...</a></p> as standalone paragraph
-        item['content'] = item['content'].replace(/^<p>RE:\s*<a[^>]*>[^<]*<\/a><\/p>\s*/i, '');
-        item['content'] = item['content'].replace(/\s*<p>RE:\s*<a[^>]*>[^<]*<\/a><\/p>$/i, '');
+        // Note: <a> tags may contain <span> tags inside, so use .*? instead of [^<]*
+        // Pattern 1: <p>RE: <a href="...">...</a></p> as standalone paragraph (with optional class like "quote-inline")
+        item['content'] = item['content'].replace(/^<p[^>]*>\s*RE:\s*<a[^>]*>.*?<\/a>\s*<\/p>\s*/i, '');
+        item['content'] = item['content'].replace(/\s*<p[^>]*>\s*RE:\s*<a[^>]*>.*?<\/a>\s*<\/p>$/i, '');
         // Pattern 2: RE: <a>...</a> without p tags (inline at start or end)
-        item['content'] = item['content'].replace(/^RE:\s*<a[^>]*>[^<]*<\/a>\s*/i, '');
-        item['content'] = item['content'].replace(/\s*RE:\s*<a[^>]*>[^<]*<\/a>$/i, '');
+        item['content'] = item['content'].replace(/^RE:\s*<a[^>]*>.*?<\/a>\s*/i, '');
+        item['content'] = item['content'].replace(/\s*RE:\s*<a[^>]*>.*?<\/a>$/i, '');
         // Pattern 3: <br>RE: ... or <br/>RE: ... (line break before RE:)
-        item['content'] = item['content'].replace(/<br\s*\/?>\s*RE:\s*<a[^>]*>[^<]*<\/a>\s*/gi, '');
+        item['content'] = item['content'].replace(/<br\s*\/?>\s*RE:\s*<a[^>]*>.*?<\/a>\s*/gi, '');
         // Pattern 4: RE: inside a paragraph with other content - remove just the RE: part
-        item['content'] = item['content'].replace(/RE:\s*<a[^>]*>[^<]*<\/a>\s*/gi, '');
+        item['content'] = item['content'].replace(/RE:\s*<a[^>]*>.*?<\/a>\s*/gi, '');
 
         // Also remove the quote URL link from content since we show the embedded quote
         if (item['quote_url'] && item['quote_url'].length > 0) {
