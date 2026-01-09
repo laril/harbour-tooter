@@ -15,7 +15,7 @@ var mediator = (function(){
         var args = Array.prototype.slice.call(arguments, 1);
         for(var i = 0, l = mediator.channels[channel].length; i < l; i++){
             var subscription = mediator.channels[channel][i];
-            subscription.callback.apply(subscription.context.args);
+            subscription.callback.apply(subscription.context, args);
         };
         return this;
     };

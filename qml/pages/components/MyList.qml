@@ -29,6 +29,17 @@ SilicaListView {
     property bool notifier: false
     property bool deduping: false
     property bool reachedEnd: false  // Flag to stop loading when timeline ends
+    property bool hasLoadedOnce: false  // Lazy loading: track if initial load done
+    property bool isCurrentTab: false   // Lazy loading: is this tab currently visible
+
+    // Lazy loading: load data when tab becomes visible for the first time
+    onIsCurrentTabChanged: {
+        if (isCurrentTab && !hasLoadedOnce) {
+            if (debug) console.log("Lazy loading: " + title)
+            loadData("prepend")
+            hasLoadedOnce = true
+        }
+    }
 
     model:  mdl
 
@@ -68,7 +79,7 @@ SilicaListView {
     ViewPlaceholder {
         id: loadStatusPlaceholder
         enabled: model.count === 0 && !myListBusyLabel.running && !remove.running
-        text: qsTr("Nothing found")
+        text: hasLoadedOnce ? qsTr("Nothing found") : qsTr("Loading...")
     }
 
     PullDownMenu {
@@ -245,18 +256,14 @@ SilicaListView {
     }
 
     Component.onCompleted: {
-        loadData("prepend")
+        // Lazy loading: don't load data here, wait for isCurrentTab to be set
         if (debug) console.log("MyList completed: " + title)
     }
 
     Timer {
         triggeredOnStart: false;
         interval: {
-
-            /*
-            * Varied calls so that server isn't hit
-            * simultaenously ... this is hamfisted
-            */
+            // Varied intervals so server isn't hit simultaneously
             var listInterval = Math.floor(Math.random() * 60)*10*1000
             if( title === "Home" ) listInterval = 20*60*1000
             if( title === "Local" ) listInterval = 10*60*1000
@@ -267,8 +274,9 @@ SilicaListView {
             if(debug) console.log(title + ' interval: ' + listInterval)
 
             return listInterval
-            }
-        running: true;
+        }
+        // Only run timer for current tab, but always run for notifications (badge updates)
+        running: isCurrentTab || notifier
         repeat: true
         onTriggered: {
             if(debug) console.log(title + ' ' + Date().toString())

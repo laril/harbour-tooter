@@ -11,8 +11,6 @@ Item {
     property double hRatio : 9/16
 
     property bool debug: false
-    width: width
-    height: height
     Component.onCompleted: {
         if(debug) console.log("MB: " + JSON.stringify(model.get(0)))
 

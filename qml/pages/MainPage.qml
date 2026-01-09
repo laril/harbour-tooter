@@ -274,6 +274,17 @@ Page {
         }
     }
 
+    // Update which tab is currently visible for lazy loading
+    function updateCurrentTab(index) {
+        tlHome.isCurrentTab = (index === 0)
+        tlNotifications.isCurrentTab = (index === 1)
+        tlLocal.isCurrentTab = (index === 2)
+        tlPublic.isCurrentTab = (index === 3)
+        tlBookmarks.isCurrentTab = (index === 4)
+        // index 5 is Search (not a MyList)
+        tlTrending.isCurrentTab = (index === 6)
+    }
+
     SlideshowView {
         id: slideshow
         width: parent.width
@@ -284,6 +295,7 @@ Page {
         model: visualModel
         onCurrentIndexChanged: {
             navigation.slideshowIndexChanged(currentIndex)
+            updateCurrentTab(currentIndex)
         }
         anchors {
             fill: parent
@@ -292,6 +304,11 @@ Page {
             bottomMargin: isPortrait ? infoPanel.visibleSize : 0
         }
         Component.onCompleted: {
+            // Initialize Home tab as current for lazy loading
+            updateCurrentTab(0)
+            // Also load Notifications at startup for badge count
+            tlNotifications.loadData("prepend")
+            tlNotifications.hasLoadedOnce = true
         }
     }
 
