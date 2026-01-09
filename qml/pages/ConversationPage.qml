@@ -373,6 +373,7 @@ Page {
             //: placeholderText in Toot text panel
             placeholderText: qsTr("What's on your mind?")
             font.pixelSize: Theme.fontSizeSmall
+            color: Theme.primaryColor
             text: username !== "" && (username.charAt(0) === '@'
                                          || username.charAt(
                                              0) === '#') ? username + ' ' : ''

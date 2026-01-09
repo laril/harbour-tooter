@@ -102,6 +102,7 @@ TRANSLATIONS += translations/harbour-tooterb.ts \
     translations/harbour-tooterb-de.ts \
     translations/harbour-tooterb-el.ts \
     translations/harbour-tooterb-es.ts \
+    translations/harbour-tooterb-fi.ts \
     translations/harbour-tooterb-fr.ts \
     translations/harbour-tooterb-it.ts \
     translations/harbour-tooterb-nl.ts \

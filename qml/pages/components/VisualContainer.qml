@@ -423,7 +423,9 @@ BackgroundItem {
         id: linkPreview
         visible: {
             if (myList.type === "notifications" && (model.type === "favourite" || model.type === "reblog")) return false
+            // Require both URL and title to avoid showing empty card boxes
             return typeof model.card_url !== "undefined" && model.card_url.length > 0
+                   && typeof model.card_title !== "undefined" && model.card_title.length > 0
         }
         width: parent.width - Theme.horizontalPageMargin * 2 - avatar.width - Theme.paddingMedium
         // Dynamic height: max of image height or text content height
@@ -720,13 +722,39 @@ BackgroundItem {
             visible: model.type !== "follow"
             text: qsTr("Reply")
             onClicked: {
-                var m = Qt.createQmlObject('import QtQuick 2.0; ListModel { }', Qt.application, 'InternalQmlObject');
-                m.append(model)
+                var m = Qt.createQmlObject('import QtQuick 2.0; ListModel { dynamicRoles:true }', Qt.application, 'InternalQmlObject');
+                if (typeof mdl !== "undefined")
+                    m.append(mdl.get(index))
+
+                // Build mentions string: author + all mentioned users, excluding self
+                var activeAccount = Logic.conf.accounts && Logic.conf.accounts[Logic.conf.activeAccount]
+                var myUsername = activeAccount && activeAccount.userInfo ? activeAccount.userInfo.account_username : ""
+                var mentions = []
+                var seen = {}
+
+                // Add the author first (unless it's us)
+                if (model.account_acct && model.account_acct !== myUsername) {
+                    mentions.push("@" + model.account_acct)
+                    seen[model.account_acct.toLowerCase()] = true
+                }
+
+                // Add all mentioned users from the toot
+                if (typeof model.status_mentions !== "undefined" && model.status_mentions.length > 0) {
+                    var mentionList = model.status_mentions.split(',')
+                    for (var i = 0; i < mentionList.length; i++) {
+                        var acct = mentionList[i].trim()
+                        if (acct && acct !== myUsername && !seen[acct.toLowerCase()]) {
+                            mentions.push("@" + acct)
+                            seen[acct.toLowerCase()] = true
+                        }
+                    }
+                }
+
                 pageStack.push(Qt.resolvedUrl("../ConversationPage.qml"), {
                     headerTitle: qsTr("Reply"),
                     "status_id": model.status_id,
                     "status_url": model.status_url,
-                    "username": "@" + model.account_acct,
+                    "username": mentions.join(' '),
                     mdl: m,
                     type: "reply",
                     openReplyPanel: true

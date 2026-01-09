@@ -56,8 +56,8 @@ Page {
             title: qsTr("Home")
             type: "timelines/home"
             mdl: Logic.modelTLhome
-            width: isPortrait ? parent.itemWidth : parent.itemWidth - Theme.itemSizeLarge
-            height: parent.itemHeight
+            width: isPortrait ? slideshow.itemWidth : slideshow.itemWidth - Theme.itemSizeLarge
+            height: slideshow.itemHeight
             onOpenDrawer: isPortrait ? infoPanel.open = setDrawer : infoPanel.open = true
 
             onCountChanged: if (count == 0) worker.verifyCredentials()
@@ -69,8 +69,8 @@ Page {
             type: "v2/notifications"
             notifier: true
             mdl: Logic.modelTLnotifications
-            width: isPortrait ? parent.itemWidth : parent.itemWidth - Theme.itemSizeLarge
-            height: parent.itemHeight
+            width: isPortrait ? slideshow.itemWidth : slideshow.itemWidth - Theme.itemSizeLarge
+            height: slideshow.itemHeight
             onOpenDrawer: isPortrait ? infoPanel.open = setDrawer : infoPanel.open = true
         }
 
@@ -80,8 +80,8 @@ Page {
             type: "timelines/public?local=true"
             //params: ["local", true]
             mdl: Logic.modelTLlocal
-            width: isPortrait ? parent.itemWidth : parent.itemWidth - Theme.itemSizeLarge
-            height: parent.itemHeight
+            width: isPortrait ? slideshow.itemWidth : slideshow.itemWidth - Theme.itemSizeLarge
+            height: slideshow.itemHeight
             onOpenDrawer: isPortrait ? infoPanel.open = setDrawer : infoPanel.open = true
         }
 
@@ -90,8 +90,8 @@ Page {
             title: qsTr("Federated")
             type: "timelines/public"
             mdl: Logic.modelTLpublic
-            width: isPortrait ? parent.itemWidth : parent.itemWidth - Theme.itemSizeLarge
-            height: parent.itemHeight
+            width: isPortrait ? slideshow.itemWidth : slideshow.itemWidth - Theme.itemSizeLarge
+            height: slideshow.itemHeight
             onOpenDrawer: isPortrait ? infoPanel.open = setDrawer : infoPanel.open = true
         }
         MyList {
@@ -99,8 +99,8 @@ Page {
             title: qsTr("Bookmarks")
             type: "bookmarks"
             mdl: Logic.modelTLbookmarks
-            width: isPortrait ? parent.itemWidth : parent.itemWidth - Theme.itemSizeLarge
-            height: parent.itemHeight
+            width: isPortrait ? slideshow.itemWidth : slideshow.itemWidth - Theme.itemSizeLarge
+            height: slideshow.itemHeight
             onOpenDrawer: isPortrait ? infoPanel.open = setDrawer : infoPanel.open = true
         }
 
@@ -110,8 +110,8 @@ Page {
             property ListModel mdl: ListModel {}
             property string search
 
-            width: isPortrait ? parent.itemWidth : parent.itemWidth - Theme.itemSizeLarge
-            height: parent.itemHeight
+            width: isPortrait ? slideshow.itemWidth : slideshow.itemWidth - Theme.itemSizeLarge
+            height: slideshow.itemHeight
             onSearchChanged: {
                 if (debug) console.log(search)
                 loader.sourceComponent = loading
@@ -268,8 +268,8 @@ Page {
             title: qsTr("Trending")
             type: "trends/statuses"
             mdl: Logic.modelTLtrending
-            width: isPortrait ? parent.itemWidth : parent.itemWidth - Theme.itemSizeLarge
-            height: parent.itemHeight
+            width: isPortrait ? slideshow.itemWidth : slideshow.itemWidth - Theme.itemSizeLarge
+            height: slideshow.itemHeight
             onOpenDrawer: isPortrait ? infoPanel.open = setDrawer : infoPanel.open = true
         }
     }

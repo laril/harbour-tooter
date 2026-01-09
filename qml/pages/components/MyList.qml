@@ -8,6 +8,7 @@ SilicaListView {
     id: myList
 
     quickScroll: appWindow.quickScrollEnabled
+    clip: true
 
     property bool debug: false
     property string type
