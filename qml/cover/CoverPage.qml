@@ -34,15 +34,19 @@ import "../lib/API.js" as Logic
 
 
 CoverBackground {
+    id: coverPage
+
+    // App active state for timer frequency
+    property bool appActive: Qt.application.state === Qt.ApplicationActive
+
     onStatusChanged: {
         switch (status ){
         case PageStatus.Activating:
-            console.log("PageStatus.Activating")
-            //timer.triggered()
+            console.log("Cover: App minimized")
+            checkNotifications()
             break;
         case PageStatus.Inactive:
-            //timer.triggered()
-            console.log("PageStatus.Inactive")
+            console.log("Cover: App active")
             break;
         }
     }
@@ -63,11 +67,12 @@ CoverBackground {
 
     Timer {
         id: timer
-        interval: 30*60*1000  // 30 minutes
+        // 1 minute when app is active, 30 minutes when minimized
+        interval: coverPage.appActive ? 60*1000 : 30*60*1000
         triggeredOnStart: true
         running: true
         repeat: true
-        onTriggered: checkNotifications();
+        onTriggered: checkNotifications()
     }
 
     Image {
