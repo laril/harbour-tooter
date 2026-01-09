@@ -28,6 +28,8 @@ Page {
     property string status_uri: ""
     property string quoted_status_id: ""
     property string quoted_account_acct: ""
+    property string quoted_account_avatar: ""
+    property string quoted_account_display_name: ""
     property string quoted_content: ""
     property bool openReplyPanel: false  // Set to true to auto-open reply panel
     property string status_link:
@@ -207,14 +209,14 @@ Page {
         }
     }
 
-    // Quote preview when composing a quote post - positioned above panel
+    // Quote preview when composing a quote post - styled like timeline quoted posts
     Rectangle {
         id: quotePreview
         visible: quoted_status_id.length > 0
         width: parent.width - Theme.horizontalPageMargin * 2
         height: visible ? quotePreviewColumn.implicitHeight + Theme.paddingMedium * 2 : 0
-        color: Theme.rgba(Theme.highlightDimmerColor, 0.95)
-        border.color: Theme.rgba(Theme.highlightColor, 0.3)
+        color: Theme.rgba(Theme.highlightBackgroundColor, 0.1)
+        border.color: Theme.rgba(Theme.highlightColor, 0.4)
         border.width: 1
         radius: Theme.paddingSmall
         anchors {
@@ -231,27 +233,57 @@ Page {
                 top: parent.top
                 margins: Theme.paddingMedium
             }
-            spacing: Theme.paddingSmall / 2
+            spacing: Theme.paddingSmall
 
-            Label {
-                text: qsTr("Quoting @%1").arg(quoted_account_acct)
-                font.pixelSize: Theme.fontSizeExtraSmall
-                font.bold: true
-                color: Theme.highlightColor
-                truncationMode: TruncationMode.Fade
+            // Quoted author row with avatar, display name and username
+            Row {
                 width: parent.width
+                spacing: Theme.paddingSmall
+
+                Image {
+                    id: quotePreviewAvatar
+                    width: Theme.iconSizeSmall
+                    height: Theme.iconSizeSmall
+                    source: quoted_account_avatar.length > 0 ? quoted_account_avatar : ""
+                    visible: quoted_account_avatar.length > 0
+                    asynchronous: true
+                    smooth: true
+                }
+
+                Column {
+                    width: parent.width - (quotePreviewAvatar.visible ? quotePreviewAvatar.width + Theme.paddingSmall : 0)
+                    spacing: 0
+
+                    Label {
+                        text: quoted_account_display_name.length > 0 ? quoted_account_display_name : quoted_account_acct.split('@')[0]
+                        font.pixelSize: Theme.fontSizeExtraSmall
+                        font.bold: true
+                        color: Theme.highlightColor
+                        truncationMode: TruncationMode.Fade
+                        width: parent.width
+                    }
+
+                    Label {
+                        text: "@" + quoted_account_acct
+                        font.pixelSize: Theme.fontSizeTiny
+                        color: Theme.secondaryColor
+                        truncationMode: TruncationMode.Fade
+                        width: parent.width
+                    }
+                }
             }
 
+            // Quoted content
             Label {
                 text: {
                     var content = quoted_content || ""
                     content = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
                     return content
                 }
-                font.pixelSize: Theme.fontSizeTiny
-                color: Theme.secondaryHighlightColor
+                font.pixelSize: Theme.fontSizeExtraSmall
+                color: Theme.primaryColor
                 wrapMode: Text.Wrap
-                maximumLineCount: 2
+                maximumLineCount: 6
                 truncationMode: TruncationMode.Elide
                 width: parent.width
             }
@@ -263,11 +295,14 @@ Page {
             anchors {
                 right: parent.right
                 rightMargin: Theme.paddingSmall
-                verticalCenter: parent.verticalCenter
+                top: parent.top
+                topMargin: Theme.paddingSmall
             }
             onClicked: {
                 quoted_status_id = ""
                 quoted_account_acct = ""
+                quoted_account_avatar = ""
+                quoted_account_display_name = ""
                 quoted_content = ""
             }
         }
@@ -751,7 +786,7 @@ Page {
                     warningContent.text = data.spoiler_text
                 }
             })
-            // Also fetch full status to get media attachments and visibility
+            // Also fetch full status to get media attachments, visibility, and quote
             Logic.api.get('statuses/' + status_id, [], function(data) {
                 console.log("Edit mode: fetched status data")
                 if (data) {
@@ -775,6 +810,17 @@ Page {
                             })
                         }
                         console.log("Edit mode: mediaModel.count = " + mediaModel.count)
+                    }
+                    // Load quote post data if present (Mastodon 4.4+)
+                    var validQuoteStates = ["accepted", "blocked_account", "blocked_domain", "muted_account"]
+                    if (data.quote && data.quote.quoted_status && validQuoteStates.indexOf(data.quote.state) !== -1) {
+                        var quoteData = data.quote.quoted_status
+                        console.log("Edit mode: found quoted post " + quoteData.id)
+                        quoted_status_id = quoteData.id
+                        quoted_content = quoteData.content || ""
+                        quoted_account_acct = quoteData.account ? quoteData.account.acct : ""
+                        quoted_account_avatar = quoteData.account ? quoteData.account.avatar : ""
+                        quoted_account_display_name = quoteData.account ? quoteData.account.display_name : ""
                     }
                 }
             })

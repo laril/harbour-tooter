@@ -101,6 +101,9 @@ BackgroundItem {
             source: typeof model.grouped_account_avatar_0 !== "undefined" ? model.grouped_account_avatar_0 : ""
             asynchronous: true
             smooth: true
+            cache: true
+            sourceSize.width: width * 2
+            sourceSize.height: height * 2
             z: 3
         }
         Image {
@@ -110,6 +113,9 @@ BackgroundItem {
             source: typeof model.grouped_account_avatar_1 !== "undefined" ? model.grouped_account_avatar_1 : ""
             asynchronous: true
             smooth: true
+            cache: true
+            sourceSize.width: width * 2
+            sourceSize.height: height * 2
             z: 2
         }
         Image {
@@ -119,6 +125,9 @@ BackgroundItem {
             source: typeof model.grouped_account_avatar_2 !== "undefined" ? model.grouped_account_avatar_2 : ""
             asynchronous: true
             smooth: true
+            cache: true
+            sourceSize.width: width * 2
+            sourceSize.height: height * 2
             z: 1
         }
     }
@@ -131,9 +140,12 @@ BackgroundItem {
         Behavior on opacity { FadeAnimator {} }
         asynchronous: true
         smooth: true
+        cache: true
         source: account_avatar
         width: Theme.iconSizeMedium
         height: width
+        sourceSize.width: width * 2
+        sourceSize.height: height * 2
         anchors {
             top: miniStatus.visible ? miniStatus.bottom : parent.top
             topMargin: miniStatus.visible ? Theme.paddingMedium : Theme.paddingLarge
@@ -206,12 +218,15 @@ BackgroundItem {
                 id: reblogAvatar
                 asynchronous: true
                 smooth: true
+                cache: true
                 opacity: status === Image.Ready ? 1.0 : 0.0
                 Behavior on opacity { FadeAnimator {} }
                 source: typeof reblog_account_avatar !== "undefined" ? reblog_account_avatar : ''
                 visible: typeof status_reblog !== "undefined" && status_reblog
                 width: Theme.iconSizeSmall
                 height: width
+                sourceSize.width: width * 2
+                sourceSize.height: height * 2
             }
 
             MouseArea {
@@ -436,6 +451,9 @@ BackgroundItem {
             source: visible ? model.card_image : ""
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
+            cache: true
+            sourceSize.width: width * 2
+            sourceSize.height: height * 2
             anchors {
                 left: parent.left
                 top: parent.top
@@ -551,6 +569,9 @@ BackgroundItem {
                     source: typeof model.quote_account_avatar !== "undefined" ? model.quote_account_avatar : ""
                     asynchronous: true
                     smooth: true
+                    cache: true
+                    sourceSize.width: width * 2
+                    sourceSize.height: height * 2
 
                     MouseArea {
                         anchors.fill: parent
@@ -694,6 +715,8 @@ BackgroundItem {
                                    headerTitle: qsTr("Quote"),
                                    quoted_status_id: model.status_id,
                                    quoted_account_acct: model.account_acct,
+                                   quoted_account_avatar: model.account_avatar,
+                                   quoted_account_display_name: model.account_display_name,
                                    quoted_content: model.content,
                                    type: "new"
                                })

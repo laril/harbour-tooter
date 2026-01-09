@@ -15,6 +15,10 @@ WorkerScript.onMessage = function(msg) {
 
     msg.params = msg.params || []
 
+    // Reset dedupe state per request to avoid stale IDs
+    knownIdsSet = {}
+    knownIdsCount = 0
+
     // this is not elegant. it's max_id and ids from MyList
     // we should always get max_id on append
     if (msg.mode === "append" && msg.params[0]) {
@@ -27,17 +31,21 @@ WorkerScript.onMessage = function(msg) {
        since_id = msg.params[0]["data"]
 
     }
-    // ids are always the last param - convert array to object for O(1) lookup
-    if (msg.params[2]) {
-        if ( msg.params[2]["name"] === "ids" ) {
-            var idsArray = msg.params[2]["data"]
-            knownIdsSet = {}
-            for (var k = 0; k < idsArray.length; k++) {
-                knownIdsSet[idsArray[k]] = true
-            }
-            knownIdsCount = idsArray.length
-            msg.params.pop()
+    // Find ids param and convert array to object for O(1) lookup
+    var idsIndex = -1
+    for (var p = 0; p < msg.params.length; p++) {
+        if (msg.params[p] && msg.params[p]["name"] === "ids") {
+            idsIndex = p
+            break
         }
+    }
+    if (idsIndex !== -1) {
+        var idsArray = msg.params[idsIndex]["data"] || []
+        for (var k = 0; k < idsArray.length; k++) {
+            knownIdsSet[idsArray[k]] = true
+        }
+        knownIdsCount = idsArray.length
+        msg.params.splice(idsIndex, 1)
     }
 
 
@@ -127,7 +135,7 @@ WorkerScript.onMessage = function(msg) {
                 // Fetch remote replies completed - re-fetch context to get new replies
                 var match = msg.action.match(/statuses\/([^\/]+)\/fetch_remote_replies/)
                 if (match && match[1] && msg.model) {
-                    console.log("fetch_remote_replies completed, re-fetching context for: " + match[1])
+                    if (debug) console.log("fetch_remote_replies completed, re-fetching context for: " + match[1])
                     API.get('statuses/' + match[1] + '/context', [], function(contextData) {
                         // Process ancestors and descendants
                         if (contextData) {
@@ -146,7 +154,7 @@ WorkerScript.onMessage = function(msg) {
                                 }
                                 if (items.length > 0) {
                                     addDataToModel(msg.model, "append", items);
-                                    console.log("Added " + items.length + " replies from remote fetch")
+                                    if (debug) console.log("Added " + items.length + " replies from remote fetch")
                                 }
                             }
                         }
@@ -175,7 +183,7 @@ WorkerScript.onMessage = function(msg) {
         // Handle single status fetch (statuses/:id without /context, /source, etc.)
         var singleStatusMatch = msg.action.match(/^statuses\/(\d+)$/)
         if (singleStatusMatch && data && data.id) {
-            console.log("Single status fetch: " + data.id)
+            if (debug) console.log("Single status fetch: " + data.id)
             var item = parseToot(data)
             item['id'] = item['status_id']
             if (typeof item['attachments'] === "undefined")
@@ -189,7 +197,7 @@ WorkerScript.onMessage = function(msg) {
 
         var items = [];
         // Debug: log API response size
-        console.log("API response for " + msg.action + ": " + (Array.isArray(data) ? data.length + " items" : typeof data))
+        if (debug) console.log("API response for " + msg.action + ": " + (Array.isArray(data) ? data.length + " items" : typeof data))
 
         for (var i in data) {
             var item;
@@ -197,13 +205,13 @@ WorkerScript.onMessage = function(msg) {
                 if(msg.action === "accounts/search") {
                     item = parseAccounts({}, "", data[i]);
                     //console.log(JSON.stringify(data[i]))
-                    console.log("has own data")
+                    if (debug) console.log("has own data")
 
                     items.push(item)
 
                 } else if(msg.action === "v2/notifications" && i === "notification_groups") {
                     // v2 grouped notifications
-                    console.log("Parsing v2 grouped notifications: " + data[i].length + " groups")
+                    if (debug) console.log("Parsing v2 grouped notifications: " + data[i].length + " groups")
                     var accountsMap = {}
                     var statusesMap = {}
 
@@ -237,7 +245,7 @@ WorkerScript.onMessage = function(msg) {
 
                 } else if(msg.action.indexOf("statuses") >-1 && msg.action.indexOf("context") >-1 && i === "ancestors") {
                     // status ancestors toots - conversation
-                    console.log("ancestors: " + (data[i] ? data[i].length : 0))
+                    if (debug) console.log("ancestors: " + (data[i] ? data[i].length : 0))
                     if (data[i] && data[i].length > 0) {
                         for (var j = 0; j < data[i].length; j++) {
                             if (data[i][j]) {
@@ -253,7 +261,7 @@ WorkerScript.onMessage = function(msg) {
                     }
                 } else if(msg.action.indexOf("statuses") >-1 && msg.action.indexOf("context") >-1 && i === "descendants") {
                     // status descendants toots - conversation
-                    console.log("descendants: " + (data[i] ? data[i].length : 0))
+                    if (debug) console.log("descendants: " + (data[i] ? data[i].length : 0))
                     if (data[i] && data[i].length > 0) {
                         for (var j = 0; j < data[i].length; j++) {
                             if (data[i][j]) {
@@ -274,7 +282,7 @@ WorkerScript.onMessage = function(msg) {
                     // Use timeline_id for pagination (preserves correct ID for reblogs)
                     item['id'] = item['timeline_id']
                     items.push(item);
-                    if (items.length <= 3) console.log("Parsed toot id: " + item['id'])
+                    if (debug && items.length <= 3) console.log("Parsed toot id: " + item['id'])
 
 
                 } else {
@@ -287,13 +295,13 @@ WorkerScript.onMessage = function(msg) {
             addDataToModel(msg.model, msg.mode, items)
         } else {
 	   // for some reason, home chokes.
-	   console.log( "items.length = " + items.length)
+	   if (debug) console.log( "items.length = " + items.length)
         }
 
         /*if(msg.action === "notifications")
             orderNotifications(items)*/
 
-        console.log("Get em all?")
+        if (debug) console.log("Get em all?")
 
         WorkerScript.sendMessage({ 'updatedAll': true, 'itemsCount': items.length, 'mode': msg.mode})
     });
@@ -307,7 +315,19 @@ function addDataToModel (model, mode, items) {
     var i
     var addedCount = 0
 
-    console.log("addDataToModel: " + length + " items, mode=" + mode + ", knownIds=" + knownIdsCount)
+    if (debug) console.log("addDataToModel: " + length + " items, mode=" + mode + ", knownIds=" + knownIdsCount)
+
+    if (knownIdsCount < 1) {
+        if (mode === "append") {
+            model.append(items)
+        } else if (mode === "prepend") {
+            for (i = length - 1; i >= 0; i--) {
+                model.insert(0, items[i])
+            }
+        }
+        model.sync()
+        return
+    }
 
     if (mode === "append") {
         for(i = 0; i <= length-1; i++) {
@@ -316,12 +336,10 @@ function addDataToModel (model, mode, items) {
                 model.append(items[i])
                 addedCount++
            } else {
-               console.log("Skipped (known): " + items[i]["id"] )
+               if (debug) console.log("Skipped (known): " + items[i]["id"] )
           }
        }
-       console.log("Added " + addedCount + " of " + length + " items")
-       // search does not use ids
-       if (knownIdsCount < 1) model.append(items)
+       if (debug) console.log("Added " + addedCount + " of " + length + " items")
 
     } else if (mode === "prepend") {
         for(i = length-1; i >= 0 ; i--) {
@@ -634,11 +652,11 @@ function parseToot (data) {
             item['quote_account_avatar'] = quoteData["account"]["avatar"] || ''
             item['quote_account_id'] = quoteData["account"]["id"] || ''
         }
-        console.log("Quote found: " + item['quote_id'] + " state: " + quoteWrapper["state"])
+        if (debug) console.log("Quote found: " + item['quote_id'] + " state: " + quoteWrapper["state"])
     } else {
         item['quote_id'] = ''
         if (quoteWrapper) {
-            console.log("Quote wrapper exists but state is: " + quoteWrapper["state"])
+            if (debug) console.log("Quote wrapper exists but state is: " + quoteWrapper["state"])
         }
     }
 
@@ -650,16 +668,22 @@ function parseToot (data) {
 
     /** Remove "RE:" quote link prefix when we have a proper quote */
     if (item['quote_id'] && item['quote_id'].length > 0) {
-        // Remove the "RE: <link>" paragraph that Mastodon adds as fallback
-        // Pattern: <p>RE: <a href="...">...</a></p> at the start
-        item['content'] = item['content'].replace(/^<p>RE:\s*<a[^>]*>.*?<\/a><\/p>\s*/i, '');
-        // Also handle if it's at the end
-        item['content'] = item['content'].replace(/\s*<p>RE:\s*<a[^>]*>.*?<\/a><\/p>$/i, '');
+        // Remove the "RE: <link>" that Mastodon adds as fallback
+        // Pattern 1: <p>RE: <a href="...">...</a></p> as standalone paragraph
+        item['content'] = item['content'].replace(/^<p>RE:\s*<a[^>]*>[^<]*<\/a><\/p>\s*/i, '');
+        item['content'] = item['content'].replace(/\s*<p>RE:\s*<a[^>]*>[^<]*<\/a><\/p>$/i, '');
+        // Pattern 2: RE: <a>...</a> without p tags (inline at start or end)
+        item['content'] = item['content'].replace(/^RE:\s*<a[^>]*>[^<]*<\/a>\s*/i, '');
+        item['content'] = item['content'].replace(/\s*RE:\s*<a[^>]*>[^<]*<\/a>$/i, '');
+        // Pattern 3: <br>RE: ... or <br/>RE: ... (line break before RE:)
+        item['content'] = item['content'].replace(/<br\s*\/?>\s*RE:\s*<a[^>]*>[^<]*<\/a>\s*/gi, '');
+        // Pattern 4: RE: inside a paragraph with other content - remove just the RE: part
+        item['content'] = item['content'].replace(/RE:\s*<a[^>]*>[^<]*<\/a>\s*/gi, '');
 
         // Also remove the quote URL link from content since we show the embedded quote
         if (item['quote_url'] && item['quote_url'].length > 0) {
             var escapedQuoteUrl = item['quote_url'].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            var quoteUrlPattern = new RegExp('<a[^>]*href="' + escapedQuoteUrl + '"[^>]*>.*?</a>', 'gi');
+            var quoteUrlPattern = new RegExp('<a[^>]*href="' + escapedQuoteUrl + '"[^>]*>[^<]*</a>', 'gi');
             item['content'] = item['content'].replace(quoteUrlPattern, '');
         }
     }
@@ -681,7 +705,9 @@ function parseToot (data) {
     item['attachments'] = [];
     for(i = 0; i < data['media_attachments'].length; i++) {
         var attachments = data['media_attachments'][i];
-        item['content'] = item['content'].replaceAll(attachments['text_url'], '')
+        if (attachments['text_url']) {
+            item['content'] = item['content'].split(attachments['text_url']).join('')
+        }
         var tmp = {
             id: attachments['id'],
             type: attachments['type'],
@@ -696,7 +722,9 @@ function parseToot (data) {
     if(item['status_reblog']) {
         for(i = 0; i < data['reblog']['media_attachments'].length ; i++) {
             var attachments = data['reblog']['media_attachments'][i];
-            item['content'] = item['content'].replaceAll(attachments['text_url'], '')
+            if (attachments['text_url']) {
+                item['content'] = item['content'].split(attachments['text_url']).join('')
+            }
             var tmp = {
                 id: attachments['id'],
                 type: attachments['type'],
