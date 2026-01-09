@@ -137,25 +137,24 @@ WorkerScript.onMessage = function(msg) {
                 if (match && match[1] && msg.model) {
                     if (debug) console.log("fetch_remote_replies completed, re-fetching context for: " + match[1])
                     API.get('statuses/' + match[1] + '/context', [], function(contextData) {
-                        // Process ancestors and descendants
-                        if (contextData) {
+                        // Build knownIdsSet from existing model to avoid duplicates
+                        buildKnownIdsFromModel(msg.model)
+                        // Process descendants only (new replies) - append to model
+                        if (contextData && contextData["descendants"] && contextData["descendants"].length > 0) {
                             var items = []
                             var item
-                            // Process descendants only (new replies) - append to model
-                            if (contextData["descendants"] && contextData["descendants"].length > 0) {
-                                for (var j = 0; j < contextData["descendants"].length; j++) {
-                                    if (contextData["descendants"][j]) {
-                                        item = parseToot(contextData["descendants"][j]);
-                                        item['id'] = item['status_id'];
-                                        if (typeof item['attachments'] === "undefined")
-                                            item['attachments'] = [];
-                                        items.push(item);
-                                    }
+                            for (var j = 0; j < contextData["descendants"].length; j++) {
+                                if (contextData["descendants"][j]) {
+                                    item = parseToot(contextData["descendants"][j]);
+                                    item['id'] = item['status_id'];
+                                    if (typeof item['attachments'] === "undefined")
+                                        item['attachments'] = [];
+                                    items.push(item);
                                 }
-                                if (items.length > 0) {
-                                    addDataToModel(msg.model, "append", items);
-                                    if (debug) console.log("Added " + items.length + " replies from remote fetch")
-                                }
+                            }
+                            if (items.length > 0) {
+                                addDataToModel(msg.model, "append", items);
+                                if (debug) console.log("Added " + items.length + " replies from remote fetch")
                             }
                         }
                     });
@@ -245,6 +244,8 @@ WorkerScript.onMessage = function(msg) {
 
                 } else if(msg.action.indexOf("statuses") >-1 && msg.action.indexOf("context") >-1 && i === "ancestors") {
                     // status ancestors toots - conversation
+                    // Build knownIdsSet from existing model to avoid duplicates
+                    buildKnownIdsFromModel(msg.model)
                     if (debug) console.log("ancestors: " + (data[i] ? data[i].length : 0))
                     if (data[i] && data[i].length > 0) {
                         for (var j = 0; j < data[i].length; j++) {
@@ -257,10 +258,19 @@ WorkerScript.onMessage = function(msg) {
                             }
                         }
                         addDataToModel(msg.model, "prepend", items);
+                        // Update knownIdsSet with newly added ancestors
+                        for (var k = 0; k < items.length; k++) {
+                            knownIdsSet[items[k]['id']] = true
+                            knownIdsCount++
+                        }
                         items = [];
                     }
                 } else if(msg.action.indexOf("statuses") >-1 && msg.action.indexOf("context") >-1 && i === "descendants") {
                     // status descendants toots - conversation
+                    // Build knownIdsSet if not already built (in case there were no ancestors)
+                    if (knownIdsCount < 1) {
+                        buildKnownIdsFromModel(msg.model)
+                    }
                     if (debug) console.log("descendants: " + (data[i] ? data[i].length : 0))
                     if (data[i] && data[i].length > 0) {
                         for (var j = 0; j < data[i].length; j++) {
@@ -359,6 +369,22 @@ function findDuplicate(arr,val) {
             }
         }
         return false;
+}
+
+/** Build knownIdsSet from existing model items for deduplication */
+function buildKnownIdsFromModel(model) {
+    knownIdsSet = {}
+    knownIdsCount = 0
+    if (model && model.count > 0) {
+        for (var i = 0; i < model.count; i++) {
+            var item = model.get(i)
+            if (item && item.status_id) {
+                knownIdsSet[item.status_id] = true
+                knownIdsCount++
+            }
+        }
+    }
+    if (debug) console.log("Built knownIdsSet from model: " + knownIdsCount + " items")
 }
 
 /* Function: Get Account Data */

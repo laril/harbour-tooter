@@ -633,31 +633,41 @@ BackgroundItem {
         id: mnu
 
         MenuItem {
-            id: mnuReply
+            id: mnuFavourite
             visible: model.type !== "follow"
-            text: qsTr("Reply")
+            text: typeof model.status_favourited !== "undefined" && model.status_favourited ? qsTr("Unfavorite") : qsTr("Favorite")
             onClicked: {
-                var m = Qt.createQmlObject('import QtQuick 2.0; ListModel { }', Qt.application, 'InternalQmlObject');
-                m.append(model)
-                pageStack.push(Qt.resolvedUrl("../ConversationPage.qml"), {
-                    headerTitle: qsTr("Reply"),
-                    "status_id": model.status_id,
-                    "status_url": model.status_url,
-                    "username": "@" + model.account_acct,
-                    mdl: m,
-                    type: "reply",
-                    openReplyPanel: true
-                })
+                var status = typeof model.status_favourited !== "undefined" && model.status_favourited
+                worker.sendMessage({
+                                       "conf"   : Logic.conf,
+                                       "params" : [],
+                                       "method" : "POST",
+                                       "bgAction": true,
+                                       "action" : "statuses/"+model.status_id+"/" + (status ? "unfavourite" : "favourite")
+                                   })
+                model.status_favourites_count = !status ? model.status_favourites_count+1 : (model.status_favourites_count > 0 ? model.status_favourites_count-1 : model.status_favourites_count);
+                model.status_favourited = !model.status_favourited
             }
 
             Icon {
-                id: icReply
-                source: "image://theme/icon-s-message?" + Theme.highlightColor
+                id: icFA
+                source: "image://theme/icon-s-favorite?" + (!model.status_favourited ? Theme.highlightColor : Theme.primaryColor)
                 width: Theme.iconSizeSmall
                 height: width
                 anchors {
-                    leftMargin: Theme.horizontalPageMargin
                     left: parent.left
+                    leftMargin: Theme.horizontalPageMargin
+                    verticalCenter: parent.verticalCenter
+                }
+            }
+
+            Label {
+                text: status_favourites_count
+                font.pixelSize: Theme.fontSizeSmall
+                color: !model.status_favourited ? Theme.highlightColor : Theme.primaryColor
+                anchors {
+                    left: icFA.right
+                    leftMargin: Theme.paddingMedium
                     verticalCenter: parent.verticalCenter
                 }
             }
@@ -706,6 +716,37 @@ BackgroundItem {
         }
 
         MenuItem {
+            id: mnuReply
+            visible: model.type !== "follow"
+            text: qsTr("Reply")
+            onClicked: {
+                var m = Qt.createQmlObject('import QtQuick 2.0; ListModel { }', Qt.application, 'InternalQmlObject');
+                m.append(model)
+                pageStack.push(Qt.resolvedUrl("../ConversationPage.qml"), {
+                    headerTitle: qsTr("Reply"),
+                    "status_id": model.status_id,
+                    "status_url": model.status_url,
+                    "username": "@" + model.account_acct,
+                    mdl: m,
+                    type: "reply",
+                    openReplyPanel: true
+                })
+            }
+
+            Icon {
+                id: icReply
+                source: "image://theme/icon-s-message?" + Theme.highlightColor
+                width: Theme.iconSizeSmall
+                height: width
+                anchors {
+                    leftMargin: Theme.horizontalPageMargin
+                    left: parent.left
+                    verticalCenter: parent.verticalCenter
+                }
+            }
+        }
+
+        MenuItem {
             id: mnuQuote
             visible: model.type !== "follow"
             enabled: model.status_visibility !== "direct"
@@ -730,47 +771,6 @@ BackgroundItem {
                 anchors {
                     leftMargin: Theme.horizontalPageMargin
                     left: parent.left
-                    verticalCenter: parent.verticalCenter
-                }
-            }
-        }
-
-        MenuItem {
-            id: mnuFavourite
-            visible: model.type !== "follow"
-            text: typeof model.status_favourited !== "undefined" && model.status_favourited ? qsTr("Unfavorite") : qsTr("Favorite")
-            onClicked: {
-                var status = typeof model.status_favourited !== "undefined" && model.status_favourited
-                worker.sendMessage({
-                                       "conf"   : Logic.conf,
-                                       "params" : [],
-                                       "method" : "POST",
-                                       "bgAction": true,
-                                       "action" : "statuses/"+model.status_id+"/" + (status ? "unfavourite" : "favourite")
-                                   })
-                model.status_favourites_count = !status ? model.status_favourites_count+1 : (model.status_favourites_count > 0 ? model.status_favourites_count-1 : model.status_favourites_count);
-                model.status_favourited = !model.status_favourited
-            }
-
-            Icon {
-                id: icFA
-                source: "image://theme/icon-s-favorite?" + (!model.status_favourited ? Theme.highlightColor : Theme.primaryColor)
-                width: Theme.iconSizeSmall
-                height: width
-                anchors {
-                    left: parent.left
-                    leftMargin: Theme.horizontalPageMargin
-                    verticalCenter: parent.verticalCenter
-                }
-            }
-
-            Label {
-                text: status_favourites_count
-                font.pixelSize: Theme.fontSizeSmall
-                color: !model.status_favourited ? Theme.highlightColor : Theme.primaryColor
-                anchors {
-                    left: icFA.right
-                    leftMargin: Theme.paddingMedium
                     verticalCenter: parent.verticalCenter
                 }
             }
