@@ -63,8 +63,9 @@ CoverBackground {
 
     Timer {
         id: timer
-        interval: 60*1000
+        interval: 30*60*1000  // 30 minutes
         triggeredOnStart: true
+        running: true
         repeat: true
         onTriggered: checkNotifications();
     }
@@ -72,6 +73,7 @@ CoverBackground {
     Image {
         id: iconNot
         source: "image://theme/icon-s-alarm?" + Theme.highlightColor
+        visible: notificationsLbl.text !== ""
         anchors {
             left: parent.left
             top: parent.top
@@ -82,13 +84,20 @@ CoverBackground {
 
     Label {
         id: notificationsLbl
-        text: " "
+        text: ""
+        font.pixelSize: Theme.fontSizeLarge
         color: Theme.highlightColor
         anchors {
             left: iconNot.right
             leftMargin: Theme.paddingMedium
             verticalCenter: iconNot.verticalCenter
         }
+    }
+
+    // Update notification count when model changes
+    Connections {
+        target: Logic.modelTLnotifications
+        onCountChanged: checkNotifications()
     }
 
     Label {
@@ -125,19 +134,22 @@ CoverBackground {
     function checkNotifications(){
         console.log("checkNotifications")
         var notificationsNum = 0
-        var notificationLastID = Logic.conf.notificationLastID;
-        //Logic.conf.notificationLastID = 0;
+        var notificationLastID = Logic.conf.notificationLastID || 0;
         for(var i = 0; i < Logic.modelTLnotifications.count; i++) {
-            if (notificationLastID < Logic.modelTLnotifications.get(i).id) {
-                notificationLastID = Logic.modelTLnotifications.get(i).id
+            var item = Logic.modelTLnotifications.get(i)
+            // Use notification_id for v2 API, fallback to id for compatibility
+            var itemId = parseInt(item.notification_id || item.id || 0)
+
+            if (itemId > notificationLastID) {
+                notificationLastID = itemId
             }
 
-            if (Logic.conf.notificationLastID < Logic.modelTLnotifications.get(i).id) {
+            if (itemId > (Logic.conf.notificationLastID || 0)) {
                 notificationsNum++
-                Logic.notifier(Logic.modelTLnotifications.get(i))
+                Logic.notifier(item)
             }
         }
-        notificationsLbl.text = notificationsNum;
+        notificationsLbl.text = notificationsNum > 0 ? notificationsNum : "";
         Logic.conf.notificationLastID = notificationLastID;
     }
 

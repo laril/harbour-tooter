@@ -56,6 +56,7 @@ SilicaGridView {
             slug: "notifications"
             name: "Notifications"
             active: false
+            unread: false
         }
 
         ListElement {
@@ -211,15 +212,35 @@ SilicaGridView {
 
     function navigateTo(slug){
         for(var i = 0; i < listModel.count; i++){
-            if (listModel.get(i).slug === slug || i===slug)
+            if (listModel.get(i).slug === slug || i===slug) {
                 listModel.setProperty(i, 'active', true);
-            else
+                // Clear unread indicator when viewing notifications
+                if (listModel.get(i).slug === "notifications") {
+                    listModel.setProperty(i, 'unread', false);
+                }
+            } else {
                 listModel.setProperty(i, 'active', false);
+            }
         }
         console.log(slug)
     }
 
     VerticalScrollDecorator {}
+
+    // Track notification count to detect new notifications
+    property int lastNotificationCount: 0
+
+    Connections {
+        target: Logic.modelTLnotifications
+        onCountChanged: {
+            var newCount = Logic.modelTLnotifications.count
+            // Show indicator if count increased and not currently viewing notifications
+            if (newCount > gridView.lastNotificationCount && !listModel.get(1).active) {
+                listModel.setProperty(1, 'unread', true)  // index 1 = notifications
+            }
+            gridView.lastNotificationCount = newCount
+        }
+    }
 
     Connections {
         // Forward events from docked panel to context menu
