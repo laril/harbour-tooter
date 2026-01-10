@@ -302,7 +302,9 @@ WorkerScript.onMessage = function(msg) {
         }
 
         if(msg.model && items.length) {
-            addDataToModel(msg.model, msg.mode, items)
+            // Pass gapIndex for fillgap mode
+            var insertIdx = (msg.mode === "fillgap" && typeof msg.gapIndex === "number") ? msg.gapIndex : undefined
+            addDataToModel(msg.model, msg.mode, items, insertIdx)
         } else {
 	   // for some reason, home chokes.
 	   if (debug) console.log( "items.length = " + items.length)
@@ -313,13 +315,22 @@ WorkerScript.onMessage = function(msg) {
 
         if (debug) console.log("Get em all?")
 
-        WorkerScript.sendMessage({ 'updatedAll': true, 'itemsCount': items.length, 'mode': msg.mode})
+        // Include gapIndex in response for fillgap mode
+        var responseMsg = { 'updatedAll': true, 'itemsCount': items.length, 'mode': msg.mode }
+        if (msg.mode === "fillgap") {
+            responseMsg.gapIndex = msg.gapIndex
+            // Send oldest item ID so MyList can update or remove the gap
+            if (items.length > 0) {
+                responseMsg.oldestItemId = items[items.length - 1]['id']
+            }
+        }
+        WorkerScript.sendMessage(responseMsg)
     });
 }
 
 //WorkerScript.sendMessage({ 'notifyNewItems': length - i })
 
-function addDataToModel (model, mode, items) {
+function addDataToModel (model, mode, items, insertIndex) {
 
     var length = items.length;
     var i
@@ -333,6 +344,11 @@ function addDataToModel (model, mode, items) {
         } else if (mode === "prepend") {
             for (i = length - 1; i >= 0; i--) {
                 model.insert(0, items[i])
+            }
+        } else if (mode === "fillgap" && typeof insertIndex === "number") {
+            // Insert items after the gap position (newest first)
+            for (i = length - 1; i >= 0; i--) {
+                model.insert(insertIndex, items[i])
             }
         }
         model.sync()
@@ -358,6 +374,17 @@ function addDataToModel (model, mode, items) {
                 model.insert(0,items[i])
             }
         }
+    } else if (mode === "fillgap" && typeof insertIndex === "number") {
+        // Insert items at gap position, skipping duplicates
+        for (i = length - 1; i >= 0; i--) {
+            if (!knownIdsSet[items[i]["id"]]) {
+                model.insert(insertIndex, items[i])
+                addedCount++
+            } else {
+                if (debug) console.log("Skipped (known): " + items[i]["id"])
+            }
+        }
+        if (debug) console.log("Gap fill: Added " + addedCount + " of " + length + " items at index " + insertIndex)
     }
     model.sync()
 }

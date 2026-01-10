@@ -52,7 +52,60 @@ BackgroundItem {
 
     RemorseItem { id: remorseDelete }
 
-    height: if (myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" )) {
+    // Gap item UI - "Load more" button for timeline gaps
+    Item {
+        id: gapLoader
+        visible: model.type === "gap"
+        width: parent.width
+        height: visible ? Theme.itemSizeLarge : 0
+
+        Rectangle {
+            anchors.fill: parent
+            color: Theme.highlightDimmerColor
+            opacity: 0.3
+        }
+
+        Row {
+            anchors.centerIn: parent
+            spacing: Theme.paddingMedium
+
+            BusyIndicator {
+                id: gapBusy
+                size: BusyIndicatorSize.Small
+                running: model.gap_loading === true
+                visible: running
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Label {
+                text: model.gap_loading === true ? qsTr("Loading...") : qsTr("Load more")
+                color: Theme.highlightColor
+                font.pixelSize: Theme.fontSizeMedium
+                anchors.verticalCenter: parent.verticalCenter
+            }
+
+            Image {
+                visible: model.gap_loading !== true
+                source: "image://theme/icon-m-down"
+                width: Theme.iconSizeSmall
+                height: width
+                anchors.verticalCenter: parent.verticalCenter
+            }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            enabled: model.gap_loading !== true
+            onClicked: {
+                console.log("Gap clicked at index " + index)
+                myList.loadGap(index)
+            }
+        }
+    }
+
+    height: if (model.type === "gap") {
+                gapLoader.height
+            } else if (myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" )) {
                 mnu.height + miniHeader.height + Theme.paddingLarge + lblContent.height + Theme.paddingLarge + (miniStatus.visible ? miniStatus.height : 0)
             } else mnu.height + miniHeader.height + (typeof attachments !== "undefined" && attachments.count ? media.height + Theme.paddingLarge + Theme.paddingMedium: Theme.paddingLarge) + lblContent.height + (isLongPost ? showMoreLabel.height : 0) + (linkPreview.visible ? linkPreview.height + Theme.paddingMedium : 0) + (quotedPost.visible ? quotedPost.height + Theme.paddingMedium : 0) + Theme.paddingLarge + (miniStatus.visible ? miniStatus.height : 0) + (iconDirectMsg.visible ? iconDirectMsg.height : 0)
 
@@ -61,7 +114,7 @@ BackgroundItem {
         id: bgDirect
         x: 0
         y: 0
-        visible: model.status_visibility === "direct"
+        visible: model.type !== "gap" && model.status_visibility === "direct"
         width: parent.width
         height: parent.height
         opacity: 0.3
@@ -85,7 +138,7 @@ BackgroundItem {
     // Stacked avatars for grouped notifications (v2 API)
     Row {
         id: stackedAvatars
-        visible: typeof model.notifications_count !== "undefined" && model.notifications_count > 1 && typeof model.grouped_account_count !== "undefined" && model.grouped_account_count > 1
+        visible: model.type !== "gap" && typeof model.notifications_count !== "undefined" && model.notifications_count > 1 && typeof model.grouped_account_count !== "undefined" && model.grouped_account_count > 1
         spacing: -Theme.paddingSmall * 1.5  // Negative spacing for overlap
         anchors {
             top: miniStatus.visible ? miniStatus.bottom : parent.top
@@ -132,10 +185,10 @@ BackgroundItem {
         }
     }
 
-    // Account avatar (hidden when showing stacked avatars)
+    // Account avatar (hidden when showing stacked avatars or for gap items)
     Image {
         id: avatar
-        visible: !stackedAvatars.visible
+        visible: model.type !== "gap" && !stackedAvatars.visible
         opacity: status === Image.Ready ? 1.0 : 0.0
         Behavior on opacity { FadeAnimator {} }
         asynchronous: true
@@ -255,6 +308,7 @@ BackgroundItem {
     // Display name, username, date of Toot
     MiniHeader {
         id: miniHeader
+        visible: model.type !== "gap"
         anchors {
             top: stackedAvatars.visible ? stackedAvatars.top : avatar.top
             left: stackedAvatars.visible ? stackedAvatars.right : avatar.right
@@ -286,7 +340,7 @@ BackgroundItem {
     // Toot content
     Label  {
         id: lblContent
-        visible: model.type !== "follow"
+        visible: model.type !== "gap" && model.type !== "follow"
         text: pressed ? processedContentPressed : processedContent
         textFormat: myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" ) ? Text.StyledText : Text.RichText
         font.pixelSize: Theme.fontSizeSmall * appWindow.fontScale
@@ -378,6 +432,7 @@ BackgroundItem {
     Label {
         id: showMoreLabel
         visible: {
+            if (model.type === "gap") return false
             if (!isLongPost) return false
             if (myList.type === "notifications" && (model.type === "favourite" || model.type === "reblog")) return false
             // Hide for main toot in conversation view
@@ -404,7 +459,7 @@ BackgroundItem {
     // Displays media in Toots
     MediaBlock {
         id: media
-        visible: (myList.type === "notifications" && ( type === "favourite" || type === "reblog" )) ? false : true
+        visible: model.type !== "gap" && ((myList.type === "notifications" && ( type === "favourite" || type === "reblog" )) ? false : true)
         model: typeof attachments !== "undefined" ? attachments : emptyAttachmentsModel
         height: Theme.iconSizeExtraLarge * 2
         anchors {
@@ -422,6 +477,7 @@ BackgroundItem {
     Rectangle {
         id: linkPreview
         visible: {
+            if (model.type === "gap") return false
             if (myList.type === "notifications" && (model.type === "favourite" || model.type === "reblog")) return false
             // Require both URL and title to avoid showing empty card boxes
             return typeof model.card_url !== "undefined" && model.card_url.length > 0
@@ -518,6 +574,7 @@ BackgroundItem {
     Rectangle {
         id: quotedPost
         visible: {
+            if (model.type === "gap") return false
             if (myList.type === "notifications" && (model.type === "favourite" || model.type === "reblog")) return false
             return typeof model.quote_id !== "undefined" && model.quote_id.length > 0
         }
@@ -630,9 +687,10 @@ BackgroundItem {
         }
     }
 
-    // Context menu for Toots
+    // Context menu for Toots (hidden for gap items)
     ContextMenu {
         id: mnu
+        visible: model.type !== "gap"
 
         MenuItem {
             id: mnuFavourite
@@ -930,6 +988,9 @@ BackgroundItem {
 
     // Open ConversationPage and show other Toots in thread (if available) or ProfilePage if new Follower
     onClicked: {
+        // Don't navigate for gap items - they have their own click handler
+        if (model.type === "gap") return
+
         var m = Qt.createQmlObject('import QtQuick 2.0; ListModel { dynamicRoles:true }', Qt.application, 'InternalQmlObject');
         if (typeof mdl !== "undefined")
             m.append(mdl.get(index))
@@ -962,6 +1023,7 @@ BackgroundItem {
     }
 
     onPressAndHold: {
+        if (model.type === "gap") return
         if (debug) console.log(JSON.stringify(mdl.get(index)))
         mnu.open(delegate)
     }

@@ -217,6 +217,11 @@ SilicaGridView {
                 // Clear unread indicator when viewing notifications
                 if (listModel.get(i).slug === "notifications") {
                     listModel.setProperty(i, 'unread', false);
+                    // Also update last seen timestamp for cover page
+                    if (Logic.modelTLnotifications.count > 0) {
+                        var newestItem = Logic.modelTLnotifications.get(0)
+                        Logic.conf.notificationLastTimestamp = newestItem.created_at ? new Date(newestItem.created_at).getTime() : 0
+                    }
                 }
             } else {
                 listModel.setProperty(i, 'active', false);
@@ -227,18 +232,36 @@ SilicaGridView {
 
     VerticalScrollDecorator {}
 
-    // Track notification count to detect new notifications
-    property int lastNotificationCount: 0
+    // Track notification timestamp to detect new notifications
+    property bool initialLoadComplete: false
+    property real lastCheckedTimestamp: 0
 
     Connections {
         target: Logic.modelTLnotifications
         onCountChanged: {
             var newCount = Logic.modelTLnotifications.count
-            // Show indicator if count increased and not currently viewing notifications
-            if (newCount > gridView.lastNotificationCount && !listModel.get(1).active) {
+            if (newCount === 0) return
+
+            // Get the newest notification timestamp
+            var newestItem = Logic.modelTLnotifications.get(0)
+            var newestTimestamp = newestItem && newestItem.created_at ? new Date(newestItem.created_at).getTime() : 0
+
+            // Skip the initial load - don't show indicator for first batch
+            if (!gridView.initialLoadComplete) {
+                gridView.lastCheckedTimestamp = newestTimestamp
+                // Also initialize the conf timestamp if not set
+                if (!Logic.conf.notificationLastTimestamp) {
+                    Logic.conf.notificationLastTimestamp = newestTimestamp
+                }
+                gridView.initialLoadComplete = true
+                return
+            }
+
+            // Show indicator if there are newer notifications and not currently viewing notifications
+            if (newestTimestamp > gridView.lastCheckedTimestamp && !listModel.get(1).active) {
                 listModel.setProperty(1, 'unread', true)  // index 1 = notifications
             }
-            gridView.lastNotificationCount = newCount
+            gridView.lastCheckedTimestamp = newestTimestamp
         }
     }
 

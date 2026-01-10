@@ -58,17 +58,36 @@
         <translation>Toot sent!</translation>
     </message>
     <message>
-        <source>Reply</source>
-        <extracomment>&quot;Reply&quot; will show the Toot text entry Panel. &quot;Hide Reply&quot; closes it. Alternative: Use &quot;Close Reply&quot;</extracomment>
-        <translation>Reply</translation>
-    </message>
-    <message>
-        <source>Hide Reply</source>
-        <translation>Hide Reply</translation>
-    </message>
-    <message>
         <source>Open in Browser</source>
         <translation>Open in Browser</translation>
+    </message>
+    <message>
+        <source>Edit Alt Text</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Removing</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Toot edited!</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Describe this media for visually impaired users</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Alt text helps make content accessible to people who are blind or have low vision.</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -198,6 +217,13 @@
         <source>followed you</source>
         <translation>followed you</translation>
     </message>
+    <message numerus="yes">
+        <source>and %n other(s)</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
 </context>
 <context>
     <name>MyList</name>
@@ -220,6 +246,14 @@
     <message>
         <source>Nothing found</source>
         <translation>Nothing found</translation>
+    </message>
+    <message>
+        <source>Loading...</source>
+        <translation type="unfinished">Loading...</translation>
+    </message>
+    <message>
+        <source>My Profile</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -407,6 +441,22 @@
         <source>Norwegian Translation</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Quick Scroll Arrows</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show arrows to jump to top/bottom when scrolling fast</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Font Size</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sample text</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>VisualContainer</name>
@@ -441,6 +491,42 @@
     <message>
         <source>Bookmark</source>
         <translation>Bookmark</translation>
+    </message>
+    <message>
+        <source>Show less</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show more</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Reply</source>
+        <translation type="unfinished">Reply</translation>
+    </message>
+    <message>
+        <source>Quote</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Deleting</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Edit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Load more</source>
+        <translation>Load more</translation>
+    </message>
+    <message>
+        <source>Loading...</source>
+        <translation>Loading...</translation>
     </message>
 </context>
 </TS>

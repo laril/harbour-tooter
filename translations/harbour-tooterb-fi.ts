@@ -520,5 +520,13 @@
         <source>Edit</source>
         <translation>Muokkaa</translation>
     </message>
+    <message>
+        <source>Load more</source>
+        <translation>Lataa lisää</translation>
+    </message>
+    <message>
+        <source>Loading...</source>
+        <translation>Ladataan...</translation>
+    </message>
 </context>
 </TS>

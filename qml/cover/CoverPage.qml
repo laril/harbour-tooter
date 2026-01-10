@@ -139,23 +139,38 @@ CoverBackground {
     function checkNotifications(){
         console.log("checkNotifications")
         var notificationsNum = 0
-        var notificationLastID = Logic.conf.notificationLastID || 0;
+        var lastSeenTimestamp = Logic.conf.notificationLastTimestamp || 0
+
         for(var i = 0; i < Logic.modelTLnotifications.count; i++) {
             var item = Logic.modelTLnotifications.get(i)
-            // Use notification_id for v2 API, fallback to id for compatibility
-            var itemId = parseInt(item.notification_id || item.id || 0)
+            // Use created_at timestamp for comparison (works with both v1 and v2 API)
+            var itemTimestamp = item.created_at ? new Date(item.created_at).getTime() : 0
 
-            if (itemId > notificationLastID) {
-                notificationLastID = itemId
-            }
-
-            if (itemId > (Logic.conf.notificationLastID || 0)) {
+            if (itemTimestamp > lastSeenTimestamp) {
                 notificationsNum++
-                Logic.notifier(item)
             }
         }
-        notificationsLbl.text = notificationsNum > 0 ? notificationsNum : "";
-        Logic.conf.notificationLastID = notificationLastID;
+
+        notificationsLbl.text = notificationsNum > 0 ? notificationsNum : ""
+
+        // Update last seen timestamp to the newest notification
+        if (Logic.modelTLnotifications.count > 0) {
+            var newestItem = Logic.modelTLnotifications.get(0)
+            var newestTimestamp = newestItem.created_at ? new Date(newestItem.created_at).getTime() : 0
+            if (newestTimestamp > lastSeenTimestamp) {
+                // Only update when user views notifications tab (not here)
+                // This keeps showing the count until user acknowledges
+            }
+        }
+    }
+
+    // Clear notification count when user views notifications
+    function markNotificationsRead() {
+        if (Logic.modelTLnotifications.count > 0) {
+            var newestItem = Logic.modelTLnotifications.get(0)
+            Logic.conf.notificationLastTimestamp = newestItem.created_at ? new Date(newestItem.created_at).getTime() : 0
+        }
+        notificationsLbl.text = ""
     }
 
 }

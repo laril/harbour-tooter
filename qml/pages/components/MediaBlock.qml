@@ -86,6 +86,8 @@ Item {
         width: 2
         height: 1
         opacity: pressed ? 0.6 : 1
+        mediaModel: holder.model
+        mediaIndex: 0
         visible: {
             if (model && model.count){
                 type = model.get(0).type
@@ -108,6 +110,8 @@ Item {
         width: 2
         height: 1
         opacity: pressed ? 0.6 : 1
+        mediaModel: holder.model
+        mediaIndex: 1
         visible: {
             if (model && model.count && model.get(1)){
                 type = model.get(1).type
@@ -130,6 +134,8 @@ Item {
         width: 2
         height: 1
         opacity: pressed ? 0.6 : 1
+        mediaModel: holder.model
+        mediaIndex: 2
         visible: {
             if (model && model.count && model.get(2)){
                 type = model.get(2).type
@@ -151,6 +157,8 @@ Item {
         width: 2
         height: 1
         opacity: pressed ? 0.6 : 1
+        mediaModel: holder.model
+        mediaIndex: 3
         visible: {
             if (model && model.count && model.get(3)){
                 type = model.get(3).type

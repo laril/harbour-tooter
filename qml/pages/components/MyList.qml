@@ -33,6 +33,10 @@ SilicaListView {
     property bool hasLoadedOnce: false  // Lazy loading: track if initial load done
     property bool isCurrentTab: false   // Lazy loading: is this tab currently visible
 
+    // Gap detection: track state before prepend to detect gaps
+    property int prePrependCount: 0
+    property string prePrependTopId: ""
+
     // Lazy loading: load data when tab becomes visible for the first time
     onIsCurrentTabChanged: {
         if (isCurrentTab && !hasLoadedOnce) {
@@ -237,6 +241,19 @@ SilicaListView {
                 if (messageObject.mode === "prepend" && messageObject.itemsCount > 0) {
                     reachedEnd = false
                 }
+
+                // Gap detection: check if there might be a gap after prepend
+                if (messageObject.mode === "prepend" && messageObject.itemsCount > 0 && prePrependCount > 0) {
+                    checkForGap(messageObject.itemsCount)
+                }
+                // Reset gap tracking state
+                prePrependCount = 0
+                prePrependTopId = ""
+
+                // Handle gap fill completion
+                if (messageObject.mode === "fillgap") {
+                    handleGapFillComplete(messageObject)
+                }
             }
 
             // the api  is stupid
@@ -332,6 +349,14 @@ SilicaListView {
     function loadData(mode) {
 
         if (debug) console.log('loadData called: ' + mode + " in " + title)
+
+        // Save state before prepend for gap detection
+        if (mode === "prepend" && model.count > 0) {
+            prePrependCount = model.count
+            prePrependTopId = model.get(0).id
+            if (debug) console.log("Gap tracking: saved top id " + prePrependTopId + " with count " + prePrependCount)
+        }
+
         // Collect current model IDs using object for O(1) operations
         // This replaces the old approach that kept growing an array and deduping
         var idsSet = {}
@@ -394,6 +419,187 @@ SilicaListView {
         //if (debug) console.log(JSON.stringify(msg))
         if (type !== "")
             worker.sendMessage(msg)
+    }
+
+    /*
+     * Gap detection: Check if there's likely a gap between new and old items
+     * Called after prepend completes
+     */
+    function checkForGap(newItemsCount) {
+        // Mastodon API typically returns max 20 items per request
+        // If we got 15+ items, there might be more we didn't fetch
+        var gapThreshold = 15
+
+        if (newItemsCount < gapThreshold) {
+            console.log(title + ": No gap detected (only " + newItemsCount + " new items)")
+            return
+        }
+
+        // Find where the old top item is now (should be at index = newItemsCount)
+        var oldTopIndex = -1
+        for (var i = 0; i < model.count; i++) {
+            if (model.get(i).id === prePrependTopId) {
+                oldTopIndex = i
+                break
+            }
+        }
+
+        if (oldTopIndex < 0) {
+            console.log(title + ": Could not find old top item, skipping gap check")
+            return
+        }
+
+        // Check if there's already a gap item at this position
+        if (oldTopIndex > 0 && model.get(oldTopIndex - 1).type === "gap") {
+            console.log(title + ": Gap item already exists at position " + (oldTopIndex - 1))
+            return
+        }
+
+        // Get the item just before the old content (newest of the old batch)
+        var oldestNewItem = model.get(oldTopIndex - 1)
+        var newestOldItem = model.get(oldTopIndex)
+
+        if (!oldestNewItem || !newestOldItem) {
+            console.log(title + ": Missing items for gap check")
+            return
+        }
+
+        console.log(title + ": Potential gap detected! Inserting gap marker between " +
+                    oldestNewItem.id + " and " + newestOldItem.id)
+
+        // Insert a gap placeholder item
+        var gapItem = {
+            type: "gap",
+            id: "gap_" + oldestNewItem.id + "_" + newestOldItem.id,
+            gap_max_id: oldestNewItem.id,  // Fetch items older than this
+            gap_since_id: newestOldItem.id, // Fetch items newer than this
+            created_at: newestOldItem.created_at,
+            section: newestOldItem.section,
+            content: "",
+            attachments: []
+        }
+
+        model.insert(oldTopIndex, gapItem)
+        console.log(title + ": Gap item inserted at index " + oldTopIndex)
+    }
+
+    /*
+     * Load items to fill a gap
+     * Called when user taps "Load more" button
+     */
+    function loadGap(gapIndex) {
+        if (gapIndex < 0 || gapIndex >= model.count) {
+            console.log("Invalid gap index: " + gapIndex)
+            return
+        }
+
+        var gapItem = model.get(gapIndex)
+        if (gapItem.type !== "gap") {
+            console.log("Item at index " + gapIndex + " is not a gap")
+            return
+        }
+
+        console.log(title + ": Loading gap between " + gapItem.gap_max_id + " and " + gapItem.gap_since_id)
+
+        // Mark as loading
+        model.setProperty(gapIndex, "gap_loading", true)
+
+        // Build params for gap fill request
+        var p = []
+        if (params.length) {
+            for (var i = 0; i < params.length; i++)
+                p.push(params[i])
+        }
+
+        // max_id: get items older than the newest new item (exclusive)
+        p.push({name: 'max_id', data: gapItem.gap_max_id})
+        // since_id: but newer than the oldest old item
+        p.push({name: 'since_id', data: gapItem.gap_since_id})
+
+        if (title === "Local") {
+            p.push({name: 'local', data: "true"})
+        } else {
+            p.push({name: 'local', data: "false"})
+        }
+
+        // Store gap info for the worker response handler
+        myList.gapFillIndex = gapIndex
+        myList.gapFillMaxId = gapItem.gap_max_id
+        myList.gapFillSinceId = gapItem.gap_since_id
+
+        var msg = {
+            'action': type,
+            'params': p,
+            'model': model,
+            'mode': 'fillgap',
+            'conf': Logic.conf,
+            'gapIndex': gapIndex
+        }
+
+        worker.sendMessage(msg)
+    }
+
+    // Gap fill state
+    property int gapFillIndex: -1
+    property string gapFillMaxId: ""
+    property string gapFillSinceId: ""
+
+    /*
+     * Handle gap fill completion
+     * Remove gap if fully filled, or update it for another load
+     */
+    function handleGapFillComplete(msg) {
+        var gapIndex = msg.gapIndex
+        var itemsCount = msg.itemsCount
+        var oldestItemId = msg.oldestItemId
+
+        console.log(title + ": Gap fill complete. Index=" + gapIndex + ", items=" + itemsCount)
+
+        // Find the gap item - it may have shifted due to insertions
+        // The gap was at gapIndex before insertion, now it's at gapIndex + itemsCount
+        var actualGapIndex = gapIndex + itemsCount
+
+        if (actualGapIndex >= model.count) {
+            console.log(title + ": Gap index out of bounds after fill")
+            gapFillIndex = -1
+            return
+        }
+
+        var gapItem = model.get(actualGapIndex)
+        if (!gapItem || gapItem.type !== "gap") {
+            // Try to find it by scanning
+            for (var i = 0; i < model.count; i++) {
+                var item = model.get(i)
+                if (item.type === "gap" && item.gap_since_id === gapFillSinceId) {
+                    actualGapIndex = i
+                    gapItem = item
+                    break
+                }
+            }
+        }
+
+        if (!gapItem || gapItem.type !== "gap") {
+            console.log(title + ": Could not find gap item after fill")
+            gapFillIndex = -1
+            return
+        }
+
+        // If we got less than threshold items, gap is fully filled - remove it
+        var gapThreshold = 15
+        if (itemsCount < gapThreshold || itemsCount === 0) {
+            console.log(title + ": Gap fully filled, removing gap item at " + actualGapIndex)
+            model.remove(actualGapIndex)
+        } else {
+            // Gap might still have more items - update max_id for next load
+            console.log(title + ": Gap may have more items, updating max_id to " + oldestItemId)
+            model.setProperty(actualGapIndex, "gap_max_id", oldestItemId)
+            model.setProperty(actualGapIndex, "gap_loading", false)
+        }
+
+        // Reset gap fill state
+        gapFillIndex = -1
+        gapFillMaxId = ""
+        gapFillSinceId = ""
     }
 }
 
