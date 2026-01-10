@@ -38,22 +38,6 @@
         <translation>What&apos;s on your mind?</translation>
     </message>
     <message>
-        <source>Public</source>
-        <translation>Public</translation>
-    </message>
-    <message>
-        <source>Unlisted</source>
-        <translation>Unlisted</translation>
-    </message>
-    <message>
-        <source>Followers-only</source>
-        <translation>Followers-only</translation>
-    </message>
-    <message>
-        <source>Direct</source>
-        <translation>Direct</translation>
-    </message>
-    <message>
         <source>Toot sent!</source>
         <translation>Toot sent!</translation>
     </message>
@@ -70,10 +54,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Removing</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Toot edited!</source>
         <translation type="unfinished"></translation>
     </message>
@@ -87,6 +67,18 @@
     </message>
     <message>
         <source>Alt text helps make content accessible to people who are blind or have low vision.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Add Media</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Post Visibility</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Post Language</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -179,6 +171,10 @@
     <message>
         <source>Trending</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Conversation</source>
+        <translation type="unfinished">Conversation</translation>
     </message>
 </context>
 <context>
@@ -527,6 +523,30 @@
     <message>
         <source>Loading...</source>
         <translation>Loading...</translation>
+    </message>
+    <message>
+        <source>Vote</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>votes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Closed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>days left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>hours left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>minutes left</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 </TS>

@@ -38,22 +38,6 @@
         <translation>Mitä mietit?</translation>
     </message>
     <message>
-        <source>Public</source>
-        <translation>Julkinen</translation>
-    </message>
-    <message>
-        <source>Unlisted</source>
-        <translation>Listaamaton</translation>
-    </message>
-    <message>
-        <source>Followers-only</source>
-        <translation>Vain seuraajille</translation>
-    </message>
-    <message>
-        <source>Direct</source>
-        <translation>Yksityisviesti</translation>
-    </message>
-    <message>
         <source>Toot sent!</source>
         <translation>Tuuttaus lähetetty!</translation>
     </message>
@@ -70,10 +54,6 @@
         <translation>Poista</translation>
     </message>
     <message>
-        <source>Removing</source>
-        <translation>Poistetaan</translation>
-    </message>
-    <message>
         <source>Toot edited!</source>
         <translation>Tuuttaus muokattu!</translation>
     </message>
@@ -88,6 +68,18 @@
     <message>
         <source>Alt text helps make content accessible to people who are blind or have low vision.</source>
         <translation>Alt-teksti auttaa tekemään sisällöstä saavutettavaa sokeille ja heikkonäköisille.</translation>
+    </message>
+    <message>
+        <source>Add Media</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Post Visibility</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Post Language</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -179,6 +171,10 @@
     <message>
         <source>Trending</source>
         <translation>Suositut</translation>
+    </message>
+    <message>
+        <source>Conversation</source>
+        <translation type="unfinished">Keskustelu</translation>
     </message>
 </context>
 <context>
@@ -527,6 +523,30 @@
     <message>
         <source>Loading...</source>
         <translation>Ladataan...</translation>
+    </message>
+    <message>
+        <source>Vote</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>votes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Closed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>days left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>hours left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>minutes left</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 </TS>

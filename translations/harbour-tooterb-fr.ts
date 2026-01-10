@@ -38,37 +38,48 @@
         <translation>Qu&apos;avez-vous en tête?</translation>
     </message>
     <message>
-        <source>Public</source>
-        <translation>Public</translation>
-    </message>
-    <message>
-        <source>Unlisted</source>
-        <translation>Non listé</translation>
-    </message>
-    <message>
-        <source>Followers-only</source>
-        <translation>Abonné(e)s uniquement</translation>
-    </message>
-    <message>
-        <source>Direct</source>
-        <translation>Direct</translation>
-    </message>
-    <message>
         <source>Toot sent!</source>
         <translation>Pouet envoyé !</translation>
     </message>
     <message>
-        <source>Reply</source>
-        <extracomment>&quot;Reply&quot; will show the Toot text entry Panel. &quot;Hide Reply&quot; closes it. Alternative: Use &quot;Close Reply&quot;</extracomment>
-        <translation>Répondre</translation>
-    </message>
-    <message>
-        <source>Hide Reply</source>
-        <translation>Masquer la réponse</translation>
-    </message>
-    <message>
         <source>Open in Browser</source>
         <translation>Ouvrir dans le navigateur</translation>
+    </message>
+    <message>
+        <source>Edit Alt Text</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Toot edited!</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Describe this media for visually impaired users</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Alt text helps make content accessible to people who are blind or have low vision.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Add Media</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Post Visibility</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Post Language</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -161,6 +172,10 @@
         <source>Trending</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Conversation</source>
+        <translation type="unfinished">Conversation</translation>
+    </message>
 </context>
 <context>
     <name>MediaFullScreen</name>
@@ -198,6 +213,13 @@
         <source>followed you</source>
         <translation>vous suit</translation>
     </message>
+    <message numerus="yes">
+        <source>and %n other(s)</source>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
 </context>
 <context>
     <name>MyList</name>
@@ -220,6 +242,14 @@
     <message>
         <source>Nothing found</source>
         <translation>Rien trouvé</translation>
+    </message>
+    <message>
+        <source>Loading...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>My Profile</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -407,6 +437,22 @@
         <source>Norwegian Translation</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Quick Scroll Arrows</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show arrows to jump to top/bottom when scrolling fast</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Font Size</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sample text</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>VisualContainer</name>
@@ -441,6 +487,66 @@
     <message>
         <source>Bookmark</source>
         <translation>Ajouter aux marque-pages</translation>
+    </message>
+    <message>
+        <source>Show less</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show more</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Reply</source>
+        <translation type="unfinished">Répondre</translation>
+    </message>
+    <message>
+        <source>Quote</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Deleting</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Edit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Loading...</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Load more</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Vote</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>votes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Closed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>days left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>hours left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>minutes left</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 </TS>

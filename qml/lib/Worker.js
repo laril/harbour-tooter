@@ -194,6 +194,26 @@ WorkerScript.onMessage = function(msg) {
             return
         }
 
+        // Handle v2/search for URL resolution
+        if (msg.action === "v2/search" && msg.mode === "resolveUrl") {
+            if (debug) console.log("URL resolution search result")
+            var statuses = []
+            if (data && data.statuses && data.statuses.length > 0) {
+                for (var si = 0; si < data.statuses.length; si++) {
+                    var statusItem = parseToot(data.statuses[si])
+                    statusItem['id'] = statusItem['status_id']
+                    statuses.push(statusItem)
+                }
+            }
+            WorkerScript.sendMessage({
+                'action': msg.action,
+                'mode': msg.mode,
+                'statuses': statuses,
+                'originalUrl': msg.originalUrl
+            })
+            return
+        }
+
         var items = [];
         // Debug: log API response size
         if (debug) console.log("API response for " + msg.action + ": " + (Array.isArray(data) ? data.length + " items" : typeof data))
@@ -412,6 +432,39 @@ function buildKnownIdsFromModel(model) {
         }
     }
     if (debug) console.log("Built knownIdsSet from model: " + knownIdsCount + " items")
+}
+
+/**
+ * Check if a URL is a Mastodon/ActivityPub status URL
+ * Used to suppress link previews for posts that should open in-app
+ */
+function isMastodonStatusUrl(url) {
+    if (!url || typeof url !== "string") return false
+    if (!url.match(/^https?:\/\//i)) return false
+
+    // Normalize: remove trailing slashes
+    var normalized = url.replace(/\/+$/, '')
+    var parts = normalized.split("/")
+
+    // Need at least: https: / "" / instance / path
+    if (parts.length < 4) return false
+
+    var pathPart1 = parts[3]
+    var pathPart2 = parts.length > 4 ? parts[4] : null
+    var pathPart3 = parts.length > 5 ? parts[5] : null
+    var pathPart4 = parts.length > 6 ? parts[6] : null
+
+    // Pattern: /@username/123456789 (length 5, starts with @, numeric ID)
+    if (parts.length === 5 && pathPart1 && pathPart1[0] === "@" && /^\d+$/.test(pathPart2)) {
+        return true
+    }
+
+    // Pattern: /users/username/statuses/123456789 (length 7)
+    if (parts.length === 7 && pathPart1 === "users" && pathPart3 === "statuses" && /^\d+$/.test(pathPart4)) {
+        return true
+    }
+
+    return false
 }
 
 /* Function: Get Account Data */
@@ -691,12 +744,19 @@ function parseToot (data) {
     /** Link Preview Card */
     var cardData = item['status_reblog'] ? data["reblog"]["card"] : data["card"]
     if (cardData) {
-        item['card_url'] = cardData["url"] || ''
-        item['card_title'] = cardData["title"] || ''
-        item['card_description'] = cardData["description"] || ''
-        item['card_image'] = cardData["image"] || ''
-        item['card_type'] = cardData["type"] || 'link'
-        item['card_provider'] = cardData["provider_name"] || ''
+        var cardUrl = cardData["url"] || ''
+        // Don't show link preview for Mastodon post URLs - they should open in-app
+        if (cardUrl && isMastodonStatusUrl(cardUrl)) {
+            if (debug) console.log("Suppressing card for Mastodon URL: " + cardUrl)
+            item['card_url'] = ''
+        } else {
+            item['card_url'] = cardUrl
+            item['card_title'] = cardData["title"] || ''
+            item['card_description'] = cardData["description"] || ''
+            item['card_image'] = cardData["image"] || ''
+            item['card_type'] = cardData["type"] || 'link'
+            item['card_provider'] = cardData["provider_name"] || ''
+        }
     } else {
         item['card_url'] = ''
     }
@@ -713,15 +773,28 @@ function parseToot (data) {
         item['quote_url'] = quoteData["url"] || ''
         item['quote_created_at'] = quoteData["created_at"] ? new Date(quoteData["created_at"]) : null
         item['quote_status_id'] = quoteData["id"] || ''
+        // Always set account properties (even if empty) for consistent model structure
         if (quoteData["account"]) {
             item['quote_account_display_name'] = quoteData["account"]["display_name"] || ''
             item['quote_account_acct'] = quoteData["account"]["acct"] || ''
             item['quote_account_avatar'] = quoteData["account"]["avatar"] || ''
             item['quote_account_id'] = quoteData["account"]["id"] || ''
+        } else {
+            // Account may be null if quoted post author deleted their account
+            item['quote_account_display_name'] = ''
+            item['quote_account_acct'] = ''
+            item['quote_account_avatar'] = ''
+            item['quote_account_id'] = ''
         }
-        if (debug) console.log("Quote found: " + item['quote_id'] + " state: " + quoteWrapper["state"])
+        if (debug) console.log("Quote found: " + item['quote_id'] + " state: " + quoteWrapper["state"] + " content length: " + item['quote_content'].length)
     } else {
         item['quote_id'] = ''
+        item['quote_content'] = ''
+        item['quote_url'] = ''
+        item['quote_account_display_name'] = ''
+        item['quote_account_acct'] = ''
+        item['quote_account_avatar'] = ''
+        item['quote_account_id'] = ''
         if (quoteWrapper) {
             if (debug) console.log("Quote wrapper exists but state is: " + quoteWrapper["state"])
         }
@@ -767,6 +840,31 @@ function parseToot (data) {
 
     /** Final cleanup: remove empty paragraphs and trim */
     item['content'] = item['content'].replace(/<p>\s*<\/p>/g, '').trim();
+
+    /** Poll data */
+    var pollData = item['status_reblog'] ? data["reblog"]["poll"] : data["poll"]
+    if (pollData) {
+        item['poll_id'] = pollData["id"] || ''
+        item['poll_expires_at'] = pollData["expires_at"] ? new Date(pollData["expires_at"]) : null
+        item['poll_expired'] = pollData["expired"] || false
+        item['poll_multiple'] = pollData["multiple"] || false
+        item['poll_votes_count'] = pollData["votes_count"] || 0
+        item['poll_voters_count'] = pollData["voters_count"] || 0
+        item['poll_voted'] = pollData["voted"] || false
+        item['poll_own_votes'] = pollData["own_votes"] ? pollData["own_votes"].join(',') : ''
+        // Store options as indexed properties for ListModel compatibility
+        item['poll_options_count'] = pollData["options"] ? pollData["options"].length : 0
+        if (pollData["options"]) {
+            for (var p = 0; p < pollData["options"].length && p < 10; p++) {
+                item['poll_option_title_' + p] = pollData["options"][p]["title"] || ''
+                item['poll_option_votes_' + p] = pollData["options"][p]["votes_count"] || 0
+            }
+        }
+        if (debug) console.log("Poll found: " + item['poll_id'] + " options: " + item['poll_options_count'] + " voted: " + item['poll_voted'])
+    } else {
+        item['poll_id'] = ''
+        item['poll_options_count'] = 0
+    }
 
     /** Media attachements in Toots */
     

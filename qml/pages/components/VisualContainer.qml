@@ -107,7 +107,7 @@ BackgroundItem {
                 gapLoader.height
             } else if (myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" )) {
                 mnu.height + miniHeader.height + Theme.paddingLarge + lblContent.height + Theme.paddingLarge + (miniStatus.visible ? miniStatus.height : 0)
-            } else mnu.height + miniHeader.height + (typeof attachments !== "undefined" && attachments.count ? media.height + Theme.paddingLarge + Theme.paddingMedium: Theme.paddingLarge) + lblContent.height + (isLongPost ? showMoreLabel.height : 0) + (linkPreview.visible ? linkPreview.height + Theme.paddingMedium : 0) + (quotedPost.visible ? quotedPost.height + Theme.paddingMedium : 0) + Theme.paddingLarge + (miniStatus.visible ? miniStatus.height : 0) + (iconDirectMsg.visible ? iconDirectMsg.height : 0)
+            } else mnu.height + miniHeader.height + (typeof attachments !== "undefined" && attachments.count ? media.height + Theme.paddingLarge + Theme.paddingMedium: Theme.paddingLarge) + lblContent.height + (isLongPost ? showMoreLabel.height : 0) + (pollContainer.visible ? pollContainer.childrenRect.height + Theme.paddingMedium : 0) + (linkPreview.visible ? linkPreview.height + Theme.paddingMedium : 0) + (quotedPost.visible ? quotedPost.height + Theme.paddingMedium : 0) + Theme.paddingLarge + (miniStatus.visible ? miniStatus.height : 0) + (iconDirectMsg.visible ? iconDirectMsg.height : 0)
 
     // Background for Direct Messages in Notification View
     Rectangle {
@@ -367,30 +367,22 @@ BackgroundItem {
             bottomMargin: Theme.paddingLarge
         }
         onLinkActivated: {
-            var test = link.split("/")
-            if (debug) {
-                console.log(link)
-                console.log(JSON.stringify(test))
-                console.log(JSON.stringify(test.length))
-            }
-            if (test.length === 5 && (test[3] === "tags" || test[3] === "tag") ) {
+            if (debug) console.log("VisualContainer link activated: " + link)
+
+            // Use the URL parser to detect Mastodon resource types
+            var parsed = Logic.parseMastodonUrl(link)
+
+            // For recognized Mastodon URLs (tag, profile, status), delegate to MainPage
+            if (parsed.type !== "unknown") {
                 pageStack.pop(pageStack.find(function(page) {
-                    var check = page.isFirstPage === true;
+                    var check = page.isFirstPage === true
                     if (check)
                         page.onLinkActivated(link)
-                    return check;
-                }));
-                send(link)
-              // temporary solution for access to user profiles via toots
-            } else if (test.length === 4 && test[3][0] === "@" ) {
-                pageStack.pop(pageStack.find(function(page) {
-                    var check = page.isFirstPage === true;
-                    if (check)
-                        page.onLinkActivated(link)
-                    return check;
-                }));
+                    return check
+                }))
             } else {
-                Qt.openUrlExternally(link);
+                // Unknown URL - open externally
+                Qt.openUrlExternally(link)
             }
         }
 
@@ -456,6 +448,448 @@ BackgroundItem {
         }
     }
 
+    // Poll display
+    Column {
+        id: pollContainer
+        visible: {
+            if (model.type === "gap") return false
+            if (myList.type === "notifications" && (model.type === "favourite" || model.type === "reblog")) return false
+            return typeof model.poll_id !== "undefined" && model.poll_id.length > 0
+        }
+        width: parent.width - Theme.horizontalPageMargin * 2 - avatar.width - Theme.paddingMedium
+        spacing: Theme.paddingSmall
+        anchors {
+            left: lblContent.left
+            right: lblContent.right
+            top: showMoreLabel.visible ? showMoreLabel.bottom : lblContent.bottom
+            topMargin: Theme.paddingMedium
+        }
+
+        // Track selected options for voting
+        property var selectedOptions: []
+        property bool hasVoted: typeof model.poll_voted !== "undefined" && model.poll_voted
+        property bool isExpired: typeof model.poll_expired !== "undefined" && model.poll_expired
+        property bool canVote: !hasVoted && !isExpired
+        property bool isMultiple: typeof model.poll_multiple !== "undefined" && model.poll_multiple
+
+        // Helper to check if option is selected
+        function isOptionSelected(idx) {
+            return selectedOptions.indexOf(idx) !== -1
+        }
+
+        // Helper to check if user voted for this option
+        function userVotedFor(idx) {
+            if (typeof model.poll_own_votes === "undefined" || model.poll_own_votes.length === 0) return false
+            var votes = model.poll_own_votes.split(',')
+            return votes.indexOf(String(idx)) !== -1
+        }
+
+        // Helper to get vote percentage
+        function getVotePercentage(optionVotes) {
+            var total = typeof model.poll_votes_count !== "undefined" ? model.poll_votes_count : 0
+            if (total === 0) return 0
+            return Math.round((optionVotes / total) * 100)
+        }
+
+        // Poll option 0
+        Rectangle {
+            visible: typeof model.poll_options_count !== "undefined" && model.poll_options_count > 0
+            width: parent.width
+            height: Math.max(Theme.itemSizeSmall, pollOption0Text.implicitHeight + Theme.paddingMedium * 2)
+            color: pollContainer.canVote && pollContainer.isOptionSelected(0) ? Theme.rgba(Theme.highlightColor, 0.3) : Theme.rgba(Theme.highlightBackgroundColor, 0.1)
+            radius: Theme.paddingSmall
+            border.color: pollContainer.userVotedFor(0) ? Theme.highlightColor : "transparent"
+            border.width: pollContainer.userVotedFor(0) ? 2 : 0
+
+            // Vote percentage bar (shown after voting or when expired)
+            Rectangle {
+                visible: !pollContainer.canVote
+                width: parent.width * pollContainer.getVotePercentage(model.poll_option_votes_0 || 0) / 100
+                height: parent.height
+                color: Theme.rgba(Theme.highlightColor, 0.2)
+                radius: Theme.paddingSmall
+            }
+
+            Row {
+                anchors.fill: parent
+                anchors.margins: Theme.paddingMedium
+                spacing: Theme.paddingSmall
+
+                // Checkbox/Radio indicator for voting
+                Rectangle {
+                    visible: pollContainer.canVote
+                    width: Theme.iconSizeSmall * 0.7
+                    height: width
+                    anchors.verticalCenter: parent.verticalCenter
+                    radius: pollContainer.isMultiple ? Theme.paddingSmall / 2 : width / 2
+                    color: pollContainer.isOptionSelected(0) ? Theme.highlightColor : "transparent"
+                    border.color: Theme.highlightColor
+                    border.width: 2
+                }
+
+                // Checkmark for voted option
+                Icon {
+                    visible: !pollContainer.canVote && pollContainer.userVotedFor(0)
+                    width: Theme.iconSizeSmall
+                    height: width
+                    anchors.verticalCenter: parent.verticalCenter
+                    source: "image://theme/icon-s-installed"
+                    color: Theme.highlightColor
+                }
+
+                Label {
+                    id: pollOption0Text
+                    text: typeof model.poll_option_title_0 !== "undefined" ? model.poll_option_title_0 : ""
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.primaryColor
+                    wrapMode: Text.Wrap
+                    width: parent.width - (pollContainer.canVote || pollContainer.userVotedFor(0) ? Theme.iconSizeSmall + Theme.paddingSmall : 0) - pollOption0Percent.width - Theme.paddingSmall
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Label {
+                    id: pollOption0Percent
+                    visible: !pollContainer.canVote
+                    text: pollContainer.getVotePercentage(model.poll_option_votes_0 || 0) + "%"
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.secondaryColor
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                enabled: pollContainer.canVote
+                onClicked: {
+                    if (pollContainer.isMultiple) {
+                        var idx = pollContainer.selectedOptions.indexOf(0)
+                        if (idx === -1) {
+                            pollContainer.selectedOptions.push(0)
+                        } else {
+                            pollContainer.selectedOptions.splice(idx, 1)
+                        }
+                        pollContainer.selectedOptions = pollContainer.selectedOptions.slice()
+                    } else {
+                        pollContainer.selectedOptions = [0]
+                    }
+                }
+            }
+        }
+
+        // Poll option 1
+        Rectangle {
+            visible: typeof model.poll_options_count !== "undefined" && model.poll_options_count > 1
+            width: parent.width
+            height: Math.max(Theme.itemSizeSmall, pollOption1Text.implicitHeight + Theme.paddingMedium * 2)
+            color: pollContainer.canVote && pollContainer.isOptionSelected(1) ? Theme.rgba(Theme.highlightColor, 0.3) : Theme.rgba(Theme.highlightBackgroundColor, 0.1)
+            radius: Theme.paddingSmall
+            border.color: pollContainer.userVotedFor(1) ? Theme.highlightColor : "transparent"
+            border.width: pollContainer.userVotedFor(1) ? 2 : 0
+
+            Rectangle {
+                visible: !pollContainer.canVote
+                width: parent.width * pollContainer.getVotePercentage(model.poll_option_votes_1 || 0) / 100
+                height: parent.height
+                color: Theme.rgba(Theme.highlightColor, 0.2)
+                radius: Theme.paddingSmall
+            }
+
+            Row {
+                anchors.fill: parent
+                anchors.margins: Theme.paddingMedium
+                spacing: Theme.paddingSmall
+
+                Rectangle {
+                    visible: pollContainer.canVote
+                    width: Theme.iconSizeSmall * 0.7
+                    height: width
+                    anchors.verticalCenter: parent.verticalCenter
+                    radius: pollContainer.isMultiple ? Theme.paddingSmall / 2 : width / 2
+                    color: pollContainer.isOptionSelected(1) ? Theme.highlightColor : "transparent"
+                    border.color: Theme.highlightColor
+                    border.width: 2
+                }
+
+                Icon {
+                    visible: !pollContainer.canVote && pollContainer.userVotedFor(1)
+                    width: Theme.iconSizeSmall
+                    height: width
+                    anchors.verticalCenter: parent.verticalCenter
+                    source: "image://theme/icon-s-installed"
+                    color: Theme.highlightColor
+                }
+
+                Label {
+                    id: pollOption1Text
+                    text: typeof model.poll_option_title_1 !== "undefined" ? model.poll_option_title_1 : ""
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.primaryColor
+                    wrapMode: Text.Wrap
+                    width: parent.width - (pollContainer.canVote || pollContainer.userVotedFor(1) ? Theme.iconSizeSmall + Theme.paddingSmall : 0) - pollOption1Percent.width - Theme.paddingSmall
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Label {
+                    id: pollOption1Percent
+                    visible: !pollContainer.canVote
+                    text: pollContainer.getVotePercentage(model.poll_option_votes_1 || 0) + "%"
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.secondaryColor
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                enabled: pollContainer.canVote
+                onClicked: {
+                    if (pollContainer.isMultiple) {
+                        var idx = pollContainer.selectedOptions.indexOf(1)
+                        if (idx === -1) {
+                            pollContainer.selectedOptions.push(1)
+                        } else {
+                            pollContainer.selectedOptions.splice(idx, 1)
+                        }
+                        pollContainer.selectedOptions = pollContainer.selectedOptions.slice()
+                    } else {
+                        pollContainer.selectedOptions = [1]
+                    }
+                }
+            }
+        }
+
+        // Poll option 2
+        Rectangle {
+            visible: typeof model.poll_options_count !== "undefined" && model.poll_options_count > 2
+            width: parent.width
+            height: Math.max(Theme.itemSizeSmall, pollOption2Text.implicitHeight + Theme.paddingMedium * 2)
+            color: pollContainer.canVote && pollContainer.isOptionSelected(2) ? Theme.rgba(Theme.highlightColor, 0.3) : Theme.rgba(Theme.highlightBackgroundColor, 0.1)
+            radius: Theme.paddingSmall
+            border.color: pollContainer.userVotedFor(2) ? Theme.highlightColor : "transparent"
+            border.width: pollContainer.userVotedFor(2) ? 2 : 0
+
+            Rectangle {
+                visible: !pollContainer.canVote
+                width: parent.width * pollContainer.getVotePercentage(model.poll_option_votes_2 || 0) / 100
+                height: parent.height
+                color: Theme.rgba(Theme.highlightColor, 0.2)
+                radius: Theme.paddingSmall
+            }
+
+            Row {
+                anchors.fill: parent
+                anchors.margins: Theme.paddingMedium
+                spacing: Theme.paddingSmall
+
+                Rectangle {
+                    visible: pollContainer.canVote
+                    width: Theme.iconSizeSmall * 0.7
+                    height: width
+                    anchors.verticalCenter: parent.verticalCenter
+                    radius: pollContainer.isMultiple ? Theme.paddingSmall / 2 : width / 2
+                    color: pollContainer.isOptionSelected(2) ? Theme.highlightColor : "transparent"
+                    border.color: Theme.highlightColor
+                    border.width: 2
+                }
+
+                Icon {
+                    visible: !pollContainer.canVote && pollContainer.userVotedFor(2)
+                    width: Theme.iconSizeSmall
+                    height: width
+                    anchors.verticalCenter: parent.verticalCenter
+                    source: "image://theme/icon-s-installed"
+                    color: Theme.highlightColor
+                }
+
+                Label {
+                    id: pollOption2Text
+                    text: typeof model.poll_option_title_2 !== "undefined" ? model.poll_option_title_2 : ""
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.primaryColor
+                    wrapMode: Text.Wrap
+                    width: parent.width - (pollContainer.canVote || pollContainer.userVotedFor(2) ? Theme.iconSizeSmall + Theme.paddingSmall : 0) - pollOption2Percent.width - Theme.paddingSmall
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Label {
+                    id: pollOption2Percent
+                    visible: !pollContainer.canVote
+                    text: pollContainer.getVotePercentage(model.poll_option_votes_2 || 0) + "%"
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.secondaryColor
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                enabled: pollContainer.canVote
+                onClicked: {
+                    if (pollContainer.isMultiple) {
+                        var idx = pollContainer.selectedOptions.indexOf(2)
+                        if (idx === -1) {
+                            pollContainer.selectedOptions.push(2)
+                        } else {
+                            pollContainer.selectedOptions.splice(idx, 1)
+                        }
+                        pollContainer.selectedOptions = pollContainer.selectedOptions.slice()
+                    } else {
+                        pollContainer.selectedOptions = [2]
+                    }
+                }
+            }
+        }
+
+        // Poll option 3
+        Rectangle {
+            visible: typeof model.poll_options_count !== "undefined" && model.poll_options_count > 3
+            width: parent.width
+            height: Math.max(Theme.itemSizeSmall, pollOption3Text.implicitHeight + Theme.paddingMedium * 2)
+            color: pollContainer.canVote && pollContainer.isOptionSelected(3) ? Theme.rgba(Theme.highlightColor, 0.3) : Theme.rgba(Theme.highlightBackgroundColor, 0.1)
+            radius: Theme.paddingSmall
+            border.color: pollContainer.userVotedFor(3) ? Theme.highlightColor : "transparent"
+            border.width: pollContainer.userVotedFor(3) ? 2 : 0
+
+            Rectangle {
+                visible: !pollContainer.canVote
+                width: parent.width * pollContainer.getVotePercentage(model.poll_option_votes_3 || 0) / 100
+                height: parent.height
+                color: Theme.rgba(Theme.highlightColor, 0.2)
+                radius: Theme.paddingSmall
+            }
+
+            Row {
+                anchors.fill: parent
+                anchors.margins: Theme.paddingMedium
+                spacing: Theme.paddingSmall
+
+                Rectangle {
+                    visible: pollContainer.canVote
+                    width: Theme.iconSizeSmall * 0.7
+                    height: width
+                    anchors.verticalCenter: parent.verticalCenter
+                    radius: pollContainer.isMultiple ? Theme.paddingSmall / 2 : width / 2
+                    color: pollContainer.isOptionSelected(3) ? Theme.highlightColor : "transparent"
+                    border.color: Theme.highlightColor
+                    border.width: 2
+                }
+
+                Icon {
+                    visible: !pollContainer.canVote && pollContainer.userVotedFor(3)
+                    width: Theme.iconSizeSmall
+                    height: width
+                    anchors.verticalCenter: parent.verticalCenter
+                    source: "image://theme/icon-s-installed"
+                    color: Theme.highlightColor
+                }
+
+                Label {
+                    id: pollOption3Text
+                    text: typeof model.poll_option_title_3 !== "undefined" ? model.poll_option_title_3 : ""
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.primaryColor
+                    wrapMode: Text.Wrap
+                    width: parent.width - (pollContainer.canVote || pollContainer.userVotedFor(3) ? Theme.iconSizeSmall + Theme.paddingSmall : 0) - pollOption3Percent.width - Theme.paddingSmall
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                Label {
+                    id: pollOption3Percent
+                    visible: !pollContainer.canVote
+                    text: pollContainer.getVotePercentage(model.poll_option_votes_3 || 0) + "%"
+                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.secondaryColor
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                enabled: pollContainer.canVote
+                onClicked: {
+                    if (pollContainer.isMultiple) {
+                        var idx = pollContainer.selectedOptions.indexOf(3)
+                        if (idx === -1) {
+                            pollContainer.selectedOptions.push(3)
+                        } else {
+                            pollContainer.selectedOptions.splice(idx, 1)
+                        }
+                        pollContainer.selectedOptions = pollContainer.selectedOptions.slice()
+                    } else {
+                        pollContainer.selectedOptions = [3]
+                    }
+                }
+            }
+        }
+
+        // Vote button and poll info
+        Row {
+            width: parent.width
+            height: Math.max(Theme.itemSizeSmall, implicitHeight)
+            spacing: Theme.paddingMedium
+
+            Button {
+                id: voteButton
+                visible: pollContainer.canVote
+                enabled: pollContainer.selectedOptions.length > 0
+                text: qsTr("Vote")
+                preferredWidth: Theme.buttonWidthSmall
+                onClicked: {
+                    // Build vote params - API expects {"choices": [0, 1, ...]}
+                    var choices = []
+                    for (var i = 0; i < pollContainer.selectedOptions.length; i++) {
+                        choices.push(pollContainer.selectedOptions[i])
+                    }
+                    worker.sendMessage({
+                        "conf": Logic.conf,
+                        "params": { "choices": choices },
+                        "method": "POST",
+                        "bgAction": true,
+                        "action": "polls/" + model.poll_id + "/votes"
+                    })
+                    // Update local state optimistically
+                    model.poll_voted = true
+                    model.poll_own_votes = pollContainer.selectedOptions.join(',')
+                    model.poll_votes_count = (model.poll_votes_count || 0) + 1
+                }
+            }
+
+            Label {
+                text: {
+                    var parts = []
+                    var total = typeof model.poll_votes_count !== "undefined" ? model.poll_votes_count : 0
+                    parts.push(total + " " + qsTr("votes"))
+
+                    if (pollContainer.isExpired) {
+                        parts.push(qsTr("Closed"))
+                    } else if (typeof model.poll_expires_at !== "undefined" && model.poll_expires_at) {
+                        var now = new Date()
+                        var expires = new Date(model.poll_expires_at)
+                        var diff = expires - now
+                        if (diff > 0) {
+                            var hours = Math.floor(diff / (1000 * 60 * 60))
+                            var minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+                            if (hours > 24) {
+                                var days = Math.floor(hours / 24)
+                                parts.push(days + " " + qsTr("days left"))
+                            } else if (hours > 0) {
+                                parts.push(hours + " " + qsTr("hours left"))
+                            } else {
+                                parts.push(minutes + " " + qsTr("minutes left"))
+                            }
+                        }
+                    }
+                    return parts.join(" · ")
+                }
+                font.pixelSize: Theme.fontSizeExtraSmall
+                color: Theme.secondaryColor
+                anchors.verticalCenter: voteButton.visible ? voteButton.verticalCenter : undefined
+                wrapMode: Text.Wrap
+                width: parent.width - (voteButton.visible ? voteButton.width + Theme.paddingMedium : 0)
+            }
+        }
+    }
+
     // Displays media in Toots
     MediaBlock {
         id: media
@@ -467,7 +901,7 @@ BackgroundItem {
             leftMargin: isPortrait ? 0 : Theme.itemSizeSmall
             right: lblContent.right
             rightMargin: isPortrait ? 0 : Theme.itemSizeLarge * 1.2
-            top: showMoreLabel.visible ? showMoreLabel.bottom : lblContent.bottom
+            top: pollContainer.visible ? pollContainer.bottom : (showMoreLabel.visible ? showMoreLabel.bottom : lblContent.bottom)
             topMargin: Theme.paddingMedium
             bottomMargin: Theme.paddingLarge
         }
@@ -491,7 +925,7 @@ BackgroundItem {
         anchors {
             left: lblContent.left
             right: lblContent.right
-            top: (typeof attachments !== "undefined" && attachments.count) ? media.bottom : (showMoreLabel.visible ? showMoreLabel.bottom : lblContent.bottom)
+            top: (typeof attachments !== "undefined" && attachments.count) ? media.bottom : (pollContainer.visible ? pollContainer.bottom : (showMoreLabel.visible ? showMoreLabel.bottom : lblContent.bottom))
             topMargin: Theme.paddingMedium
         }
 
@@ -576,7 +1010,12 @@ BackgroundItem {
         visible: {
             if (model.type === "gap") return false
             if (myList.type === "notifications" && (model.type === "favourite" || model.type === "reblog")) return false
-            return typeof model.quote_id !== "undefined" && model.quote_id.length > 0
+            // Require both quote_id AND some meaningful content (either text content or author info)
+            var hasQuoteId = typeof model.quote_id !== "undefined" && model.quote_id.length > 0
+            if (!hasQuoteId) return false
+            var hasContent = typeof model.quote_content !== "undefined" && model.quote_content.length > 0
+            var hasAuthor = typeof model.quote_account_acct !== "undefined" && model.quote_account_acct.length > 0
+            return hasContent || hasAuthor
         }
         width: parent.width - Theme.horizontalPageMargin * 2 - avatar.width - Theme.paddingMedium
         height: visible ? quotedPostContent.implicitHeight + Theme.paddingMedium * 2 : 0
@@ -587,7 +1026,7 @@ BackgroundItem {
         anchors {
             left: lblContent.left
             right: lblContent.right
-            top: linkPreview.visible ? linkPreview.bottom : ((typeof attachments !== "undefined" && attachments.count) ? media.bottom : (showMoreLabel.visible ? showMoreLabel.bottom : lblContent.bottom))
+            top: linkPreview.visible ? linkPreview.bottom : ((typeof attachments !== "undefined" && attachments.count) ? media.bottom : (pollContainer.visible ? pollContainer.bottom : (showMoreLabel.visible ? showMoreLabel.bottom : lblContent.bottom)))
             topMargin: Theme.paddingMedium
         }
 

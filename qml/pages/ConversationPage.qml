@@ -83,7 +83,7 @@ Page {
     ListModel {
         id: mediaModel
         onCountChanged: {
-            btnAddImage.enabled = mediaModel.count < 4
+            btnAddMedia.enabled = mediaModel.count < 4
         }
     }
 
@@ -433,10 +433,11 @@ Page {
 
         SilicaGridView {
             id: uploadedImages
+            visible: mediaModel.count > 0
             width: parent.width
-            anchors.top: bottom.toot
-            anchors.bottom: parent.bottom
-            height: mediaModel.count ? Theme.itemSizeExtraLarge : 0
+            anchors.top: btnContentWarning.bottom
+            anchors.topMargin: mediaModel.count > 0 ? Theme.paddingSmall : 0
+            height: mediaModel.count > 0 ? Theme.itemSizeExtraLarge : 0
             model: mediaModel
             cellWidth: uploadedImages.width / 4
             cellHeight: isPortrait ? cellWidth : Theme.itemSizeExtraLarge
@@ -459,8 +460,9 @@ Page {
 
                 // ALT badge indicator
                 Rectangle {
-                    visible: model.description && model.description.length > 0
-                    color: Theme.rgba(Theme.highlightBackgroundColor, 0.9)
+                    property bool hasAlt: model.description && model.description.length > 0
+                    visible: true
+                    color: hasAlt ? Theme.rgba(Theme.highlightBackgroundColor, 0.9) : Theme.rgba(Theme.errorColor, 0.8)
                     radius: Theme.paddingSmall / 2
                     width: altLabel.width + Theme.paddingSmall
                     height: altLabel.height + Theme.paddingSmall / 2
@@ -471,10 +473,10 @@ Page {
                     }
                     Label {
                         id: altLabel
-                        text: "ALT"
+                        text: parent.hasAlt ? "ALT" : "NO ALT"
                         font.pixelSize: Theme.fontSizeTiny
                         font.bold: true
-                        color: Theme.primaryColor
+                        color: parent.hasAlt ? Theme.primaryColor : Theme.lightPrimaryColor
                         anchors.centerIn: parent
                     }
                 }
@@ -505,10 +507,7 @@ Page {
                         MenuItem {
                             text: qsTr("Remove")
                             onClicked: {
-                                var idx = index
-                                myDelegate.remorseAction(qsTr("Removing"), function() {
-                                    mediaModel.remove(idx)
-                                })
+                                mediaModel.remove(index)
                             }
                         }
                     }
@@ -519,7 +518,7 @@ Page {
                     property: "opacity"
                     from: 0
                     to: 1.0
-                    duration: 800
+                    duration: 200
                 }
             }
             remove: Transition {
@@ -527,14 +526,14 @@ Page {
                     property: "opacity"
                     from: 1.0
                     to: 0
-                    duration: 800
+                    duration: 150
                 }
             }
             displaced: Transition {
                 NumberAnimation {
                     properties: "x,y"
-                    duration: 800
-                    easing.type: Easing.InOutBack
+                    duration: 200
+                    easing.type: Easing.OutQuad
                 }
             }
         }
@@ -552,54 +551,16 @@ Page {
         }
 
         IconButton {
-            id: btnAddImage
+            id: btnAddMedia
             enabled: mediaModel.count < 4
-            icon.source: "image://theme/icon-m-file-image?" + ( pressed ? Theme.highlightColor : (warningContent.visible ? Theme.secondaryHighlightColor : Theme.primaryColor) )
+            icon.source: "image://theme/icon-m-attach?" + ( pressed ? Theme.highlightColor : Theme.primaryColor )
             anchors {
                 top: toot.bottom
                 topMargin: -Theme.paddingSmall * 1.5
                 left: btnContentWarning.right
                 leftMargin: Theme.paddingSmall
             }
-            onClicked: {
-                btnAddImage.enabled = false
-                var once = true
-                pageStack.push(imagePickerPage)
-            }
-        }
-
-        IconButton {
-            id: btnAddMusic
-            visible: Logic.getActiveAccount().type !== 1
-            enabled: mediaModel.count < 4
-            icon.source: "image://theme/icon-m-file-audio?" + ( pressed ? Theme.highlightColor : (warningContent.visible ? Theme.secondaryHighlightColor : Theme.primaryColor) )
-            anchors {
-                top: toot.bottom
-                topMargin: -Theme.paddingSmall * 1.5
-                left: btnAddImage.right
-                leftMargin: Theme.paddingSmall
-            }
-            onClicked: {
-                btnAddMusic.enabled = false
-                var once = true
-                pageStack.push(musicPickerPage)
-            }
-        }
-        IconButton {
-            id: btnAddVideo
-            enabled: mediaModel.count < 4
-            icon.source: "image://theme/icon-m-file-video?" + ( pressed ? Theme.highlightColor : (warningContent.visible ? Theme.secondaryHighlightColor : Theme.primaryColor) )
-            anchors {
-                top: toot.bottom
-                topMargin: -Theme.paddingSmall * 1.5
-                left: btnAddMusic.visible ? btnAddMusic.right : btnAddMusic.left
-                leftMargin: Theme.paddingSmall
-            }
-            onClicked: {
-                btnAddVideo.enabled = false
-                var once = true
-                pageStack.push(videoPickerPage)
-            }
+            onClicked: pageStack.push(mediaTypeDialog)
         }
         Component {
             id: musicPickerPage
@@ -648,38 +609,58 @@ Page {
                 uploadProgress.width = 0
                 //console.log(replyData)
                 mediaModel.append(JSON.parse(replyData))
+                btnAddMedia.enabled = mediaModel.count < 4
             }
             onFailure: {
                 uploadProgress.width = 0
-                btnAddImage.enabled = true
-                btnAddMusic.enabled = true
-                btnAddVideo.enabled = true
+                btnAddMedia.enabled = mediaModel.count < 4
                 //console.log(status)
                 //console.log(statusText)
             }
         }
 
-        ComboBox {
-            id: privacy
-            menu: ContextMenu {
-                MenuItem {
-                    text: qsTr("Public")
-                }
-                MenuItem {
-                    text: qsTr("Unlisted")
-                }
-                MenuItem {
-                    text: qsTr("Followers-only")
-                }
-                MenuItem {
-                    text: qsTr("Direct")
-                }
+        IconButton {
+            id: btnPrivacy
+            property int currentIndex: 0
+            icon.source: {
+                var icons = [
+                    "image://theme/icon-m-region",     // public (globe)
+                    "image://theme/icon-m-home",       // unlisted
+                    "image://theme/icon-m-people",     // followers-only
+                    "image://theme/icon-m-mail"        // direct
+                ]
+                return icons[currentIndex] + "?" + (pressed ? Theme.highlightColor : Theme.primaryColor)
             }
             anchors {
                 top: toot.bottom
                 topMargin: -Theme.paddingSmall * 1.5
-                left: btnAddVideo.right
-                right: btnSend.left
+                left: btnAddMedia.right
+                leftMargin: Theme.paddingSmall
+            }
+            onClicked: pageStack.push(visibilityDialog)
+        }
+
+        // Language selector - just the language code as a clickable button
+        BackgroundItem {
+            id: btnLanguage
+            property string selectedLanguage: Qt.locale().name.substring(0, 2)  // System language as default
+            width: languageText.width + Theme.paddingMedium * 2
+            height: btnPrivacy.height
+            anchors {
+                top: toot.bottom
+                topMargin: -Theme.paddingSmall * 1.5
+                left: btnPrivacy.right
+                leftMargin: Theme.paddingSmall
+            }
+            onClicked: pageStack.push(languageDialog)
+
+            Label {
+                id: languageText
+                text: btnLanguage.selectedLanguage.toUpperCase()
+                font.pixelSize: Theme.fontSizeSmall
+                font.bold: true
+                color: parent.highlighted ? Theme.highlightColor : Theme.primaryColor
+                anchors.centerIn: parent
             }
         }
 
@@ -719,7 +700,7 @@ Page {
                         "method": 'PUT',
                         "params": {
                             "status": toot.text,
-                            "visibility": visibility[privacy.currentIndex],
+                            "visibility": visibility[btnPrivacy.currentIndex],
                             "media_ids": media_ids,
                             "media_attributes": media_attributes
                         },
@@ -734,7 +715,7 @@ Page {
                         "mode": "append",
                         "params": {
                             "status": toot.text,
-                            "visibility": visibility[privacy.currentIndex],
+                            "visibility": visibility[btnPrivacy.currentIndex],
                             "media_ids": media_ids
                         },
                         "conf": Logic.conf
@@ -750,10 +731,16 @@ Page {
                     msg.params['spoiler_text'] = warningContent.text
                 }
 
+                // Add language if selected
+                if (btnLanguage.selectedLanguage !== "") {
+                    msg.params['language'] = btnLanguage.selectedLanguage
+                }
+
                 worker.sendMessage(msg)
                 warningContent.text = ""
                 toot.text = ""
                 mediaModel.clear()
+                btnLanguage.selectedLanguage = Qt.locale().name.substring(0, 2)
                 sentBanner.showText(editMode ? qsTr("Toot edited!") : qsTr("Toot sent!"))
                 if (editMode) {
                     pageStack.pop()
@@ -794,7 +781,7 @@ Page {
                     // Set visibility
                     var visibilityMap = {"public": 0, "unlisted": 1, "private": 2, "direct": 3}
                     if (data.visibility && visibilityMap[data.visibility] !== undefined) {
-                        privacy.currentIndex = visibilityMap[data.visibility]
+                        btnPrivacy.currentIndex = visibilityMap[data.visibility]
                     }
                     // Load existing media attachments
                     if (data.media_attachments && data.media_attachments.length > 0) {
@@ -838,14 +825,19 @@ Page {
                 setIndex = 2
                 break
             case "direct":
-                privacy.enabled = false
+                btnPrivacy.enabled = false
                 setIndex = 3
                 break
             default:
-                privacy.enabled = true
+                btnPrivacy.enabled = true
                 setIndex = 0
             }
-            privacy.currentIndex = setIndex
+            btnPrivacy.currentIndex = setIndex
+
+            // Set reply language to match the original toot's language
+            if (mdl.get(0).status_language && mdl.get(0).status_language.length > 0) {
+                btnLanguage.selectedLanguage = mdl.get(0).status_language
+            }
 
             // console.log(JSON.stringify())
 
@@ -997,6 +989,217 @@ Page {
             onAccepted: {
                 if (mediaIndex >= 0 && mediaIndex < mediaModel.count) {
                     mediaModel.setProperty(mediaIndex, "description", altTextArea.text)
+                }
+            }
+        }
+    }
+
+    Component {
+        id: mediaTypeDialog
+        Page {
+            SilicaListView {
+                anchors.fill: parent
+                header: PageHeader {
+                    title: qsTr("Add Media")
+                }
+                model: ListModel {
+                    ListElement { name: "Image"; icon: "image://theme/icon-m-file-image"; mediaType: "image" }
+                    ListElement { name: "Audio"; icon: "image://theme/icon-m-file-audio"; mediaType: "audio" }
+                    ListElement { name: "Video"; icon: "image://theme/icon-m-file-video"; mediaType: "video" }
+                }
+                delegate: ListItem {
+                    visible: model.mediaType !== "audio" || Logic.getActiveAccount().type !== 1
+                    contentHeight: visible ? Theme.itemSizeMedium : 0
+                    Row {
+                        anchors.fill: parent
+                        anchors.leftMargin: Theme.horizontalPageMargin
+                        anchors.rightMargin: Theme.horizontalPageMargin
+                        spacing: Theme.paddingMedium
+
+                        Icon {
+                            source: model.icon
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        Label {
+                            text: qsTr(model.name)
+                            color: highlighted ? Theme.highlightColor : Theme.primaryColor
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+                    onClicked: {
+                        btnAddMedia.enabled = false
+                        if (model.mediaType === "image") {
+                            pageStack.replace(imagePickerPage)
+                        } else if (model.mediaType === "audio") {
+                            pageStack.replace(musicPickerPage)
+                        } else if (model.mediaType === "video") {
+                            pageStack.replace(videoPickerPage)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Component {
+        id: visibilityDialog
+        Page {
+            SilicaListView {
+                anchors.fill: parent
+                header: PageHeader {
+                    title: qsTr("Post Visibility")
+                }
+                model: ListModel {
+                    ListElement { name: "Public"; value: 0; icon: "image://theme/icon-m-region"; desc: "Visible to everyone" }
+                    ListElement { name: "Unlisted"; value: 1; icon: "image://theme/icon-m-home"; desc: "Visible to everyone, but not in public timelines" }
+                    ListElement { name: "Followers-only"; value: 2; icon: "image://theme/icon-m-people"; desc: "Only visible to followers" }
+                    ListElement { name: "Direct"; value: 3; icon: "image://theme/icon-m-mail"; desc: "Only visible to mentioned users" }
+                }
+                delegate: ListItem {
+                    contentHeight: Theme.itemSizeMedium
+                    Row {
+                        anchors.fill: parent
+                        anchors.leftMargin: Theme.horizontalPageMargin
+                        anchors.rightMargin: Theme.horizontalPageMargin
+                        spacing: Theme.paddingMedium
+
+                        Icon {
+                            source: model.icon
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width - Theme.iconSizeMedium - Theme.paddingMedium - checkIcon.width
+
+                            Label {
+                                text: qsTr(model.name)
+                                color: highlighted ? Theme.highlightColor : Theme.primaryColor
+                            }
+                            Label {
+                                text: model.desc
+                                font.pixelSize: Theme.fontSizeExtraSmall
+                                color: Theme.secondaryColor
+                                truncationMode: TruncationMode.Fade
+                                width: parent.width
+                            }
+                        }
+
+                        Icon {
+                            id: checkIcon
+                            source: "image://theme/icon-m-acknowledge"
+                            visible: btnPrivacy.currentIndex === model.value
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+                    onClicked: {
+                        btnPrivacy.currentIndex = model.value
+                        pageStack.pop()
+                    }
+                }
+            }
+        }
+    }
+
+    Component {
+        id: languageDialog
+        Page {
+            SilicaListView {
+                anchors.fill: parent
+                header: PageHeader {
+                    title: qsTr("Post Language")
+                }
+                model: ListModel {
+                    // Alphabetically sorted by native name
+                    ListElement { name: "Bahasa Indonesia"; code: "id" }
+                    ListElement { name: "Bahasa Melayu"; code: "ms" }
+                    ListElement { name: "Bosanski"; code: "bs" }
+                    ListElement { name: "Brezhoneg"; code: "br" }
+                    ListElement { name: "Català"; code: "ca" }
+                    ListElement { name: "Cymraeg"; code: "cy" }
+                    ListElement { name: "Čeština"; code: "cs" }
+                    ListElement { name: "Dansk"; code: "da" }
+                    ListElement { name: "Deutsch"; code: "de" }
+                    ListElement { name: "Eesti"; code: "et" }
+                    ListElement { name: "English"; code: "en" }
+                    ListElement { name: "Español"; code: "es" }
+                    ListElement { name: "Euskara"; code: "eu" }
+                    ListElement { name: "Français"; code: "fr" }
+                    ListElement { name: "Gaeilge"; code: "ga" }
+                    ListElement { name: "Galego"; code: "gl" }
+                    ListElement { name: "Hrvatski"; code: "hr" }
+                    ListElement { name: "Íslenska"; code: "is" }
+                    ListElement { name: "Italiano"; code: "it" }
+                    ListElement { name: "Latviešu"; code: "lv" }
+                    ListElement { name: "Lietuvių"; code: "lt" }
+                    ListElement { name: "Magyar"; code: "hu" }
+                    ListElement { name: "Malti"; code: "mt" }
+                    ListElement { name: "Nederlands"; code: "nl" }
+                    ListElement { name: "Norsk bokmål"; code: "nb" }
+                    ListElement { name: "Norsk nynorsk"; code: "nn" }
+                    ListElement { name: "Occitan"; code: "oc" }
+                    ListElement { name: "Polski"; code: "pl" }
+                    ListElement { name: "Português"; code: "pt" }
+                    ListElement { name: "Română"; code: "ro" }
+                    ListElement { name: "Shqip"; code: "sq" }
+                    ListElement { name: "Slovenčina"; code: "sk" }
+                    ListElement { name: "Slovenščina"; code: "sl" }
+                    ListElement { name: "Srpski"; code: "sr" }
+                    ListElement { name: "Suomi"; code: "fi" }
+                    ListElement { name: "Svenska"; code: "sv" }
+                    ListElement { name: "Tiếng Việt"; code: "vi" }
+                    ListElement { name: "Türkçe"; code: "tr" }
+                    ListElement { name: "Ελληνικά"; code: "el" }
+                    ListElement { name: "Беларуская"; code: "be" }
+                    ListElement { name: "Български"; code: "bg" }
+                    ListElement { name: "Македонски"; code: "mk" }
+                    ListElement { name: "Русский"; code: "ru" }
+                    ListElement { name: "Українська"; code: "uk" }
+                    ListElement { name: "עברית"; code: "he" }
+                    ListElement { name: "العربية"; code: "ar" }
+                    ListElement { name: "فارسی"; code: "fa" }
+                    ListElement { name: "हिन्दी"; code: "hi" }
+                    ListElement { name: "ไทย"; code: "th" }
+                    ListElement { name: "中文"; code: "zh" }
+                    ListElement { name: "日本語"; code: "ja" }
+                    ListElement { name: "한국어"; code: "ko" }
+                }
+                delegate: ListItem {
+                    contentHeight: Theme.itemSizeSmall
+                    Row {
+                        anchors.fill: parent
+                        anchors.leftMargin: Theme.horizontalPageMargin
+                        anchors.rightMargin: Theme.horizontalPageMargin
+                        spacing: Theme.paddingMedium
+
+                        Label {
+                            text: model.code.toUpperCase()
+                            font.pixelSize: Theme.fontSizeSmall
+                            font.bold: true
+                            color: Theme.secondaryColor
+                            width: Theme.itemSizeSmall
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        Label {
+                            text: model.name
+                            color: highlighted ? Theme.highlightColor : Theme.primaryColor
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width - Theme.itemSizeSmall - checkIcon.width - Theme.paddingMedium * 2
+                        }
+
+                        Icon {
+                            id: checkIcon
+                            source: "image://theme/icon-m-acknowledge"
+                            visible: btnLanguage.selectedLanguage === model.code
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+                    onClicked: {
+                        btnLanguage.selectedLanguage = model.code
+                        pageStack.pop()
+                    }
                 }
             }
         }

@@ -67,8 +67,8 @@ CoverBackground {
 
     Timer {
         id: timer
-        // 1 minute when app is active, 30 minutes when minimized
-        interval: coverPage.appActive ? 60*1000 : 30*60*1000
+        // Same interval as notifications polling in MyList (12 minutes)
+        interval: 12*60*1000
         triggeredOnStart: true
         running: true
         repeat: true
