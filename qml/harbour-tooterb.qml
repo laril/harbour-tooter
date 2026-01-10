@@ -40,8 +40,8 @@ ApplicationWindow {
 
     // Global font scale property - reactive, updates UI immediately
     property real fontScale: 1.0
-    // Global quick scroll setting - reactive
-    property bool quickScrollEnabled: true
+    // Show full usernames (@user@domain) vs short (@user)
+    property bool fullUsernames: false
     // Instance max characters - fetched from server, default to 500
     property int instanceMaxChars: 500
 
@@ -57,8 +57,8 @@ ApplicationWindow {
                 Logic.conf['accounts'] = []
             if (typeof Logic.conf['fontScale'] !== "undefined")
                 appWindow.fontScale = Logic.conf['fontScale']
-            if (typeof Logic.conf['quickScroll'] !== "undefined")
-                appWindow.quickScrollEnabled = Logic.conf['quickScroll']
+            if (typeof Logic.conf['fullUsernames'] !== "undefined")
+                appWindow.fullUsernames = Logic.conf['fullUsernames']
 
             var oldAccountParameters = ['api_user_token', 'instance', 'login']
             if (oldAccountParameters.every(function(el) { return el in Logic.conf })) {

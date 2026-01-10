@@ -264,7 +264,13 @@ Page {
                     }
 
                     Label {
-                        text: "@" + quoted_account_acct
+                        text: {
+                            var acct = quoted_account_acct
+                            if (!appWindow.fullUsernames && acct.indexOf('@') > 0) {
+                                acct = acct.split('@')[0]
+                            }
+                            return "@" + acct
+                        }
                         font.pixelSize: Theme.fontSizeTiny
                         color: Theme.secondaryColor
                         truncationMode: TruncationMode.Fade

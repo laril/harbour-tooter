@@ -26,7 +26,7 @@ Item {
     Label {
         id: lblScreenName
         visible: model.type !== "follow"
-        text: '@'+account_username
+        text: '@' + (appWindow.fullUsernames ? account_acct : account_username)
         font.pixelSize: Theme.fontSizeExtraSmall
         color: ( pressed ? Theme.secondaryHighlightColor : Theme.secondaryColor )
         truncationMode: TruncationMode.Fade
@@ -42,7 +42,7 @@ Item {
     Label {
         id: lblScreenNameFollow
         visible: model.type === "follow"
-        text: '@'+account_username
+        text: '@' + (appWindow.fullUsernames ? account_acct : account_username)
         font.pixelSize: Theme.fontSizeExtraSmall
         color: ( pressed ? Theme.secondaryHighlightColor : Theme.secondaryColor )
         width: parent.width - Theme.paddingMedium

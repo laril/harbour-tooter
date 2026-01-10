@@ -438,19 +438,19 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Quick Scroll Arrows</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Show arrows to jump to top/bottom when scrolling fast</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Font Size</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Sample text</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show Full Usernames</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Display @user@domain instead of @user</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
