@@ -9,7 +9,7 @@ Item {
 
     Label {
         id: lblName
-        text: account_display_name ? account_display_name : account_username.split('@')[0]
+        text: account_display_name ? account_display_name : (typeof account_username !== "undefined" && account_username ? account_username.split('@')[0] : "")
         font.weight: Font.Bold
         font.pixelSize: Theme.fontSizeSmall
         color: if ( myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" )) {
@@ -26,7 +26,7 @@ Item {
     Label {
         id: lblScreenName
         visible: model.type !== "follow"
-        text: '@' + (appWindow.fullUsernames ? account_acct : account_username)
+        text: '@' + (appWindow.fullUsernames && typeof account_acct !== "undefined" ? account_acct : (typeof account_username !== "undefined" ? account_username : ""))
         font.pixelSize: Theme.fontSizeExtraSmall
         color: ( pressed ? Theme.secondaryHighlightColor : Theme.secondaryColor )
         truncationMode: TruncationMode.Fade
@@ -42,7 +42,7 @@ Item {
     Label {
         id: lblScreenNameFollow
         visible: model.type === "follow"
-        text: '@' + (appWindow.fullUsernames ? account_acct : account_username)
+        text: '@' + (appWindow.fullUsernames && typeof account_acct !== "undefined" ? account_acct : (typeof account_username !== "undefined" ? account_username : ""))
         font.pixelSize: Theme.fontSizeExtraSmall
         color: ( pressed ? Theme.secondaryHighlightColor : Theme.secondaryColor )
         width: parent.width - Theme.paddingMedium

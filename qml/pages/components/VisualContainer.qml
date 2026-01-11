@@ -194,7 +194,7 @@ BackgroundItem {
         asynchronous: true
         smooth: true
         cache: true
-        source: account_avatar
+        source: typeof account_avatar !== "undefined" ? account_avatar : ""
         width: Theme.iconSizeMedium
         height: width
         sourceSize.width: width * 2
@@ -319,7 +319,7 @@ BackgroundItem {
     // Cache processed content to avoid regex on every press state change
     // Compute base content (truncated if needed) once, then derive styled versions
     property string baseDisplayContent: {
-        var displayContent = content
+        var displayContent = typeof content !== "undefined" ? content : ""
         // Truncate if long post and not expanded (not for notifications)
         // In conversation view, don't truncate the main clicked toot
         var isMainConversationToot = (typeof myList.type !== "undefined" && myList.type === "conversation" &&
@@ -356,7 +356,7 @@ BackgroundItem {
                     Theme.paddingLarge
                 } else if (myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" )) {
                     Math.min( implicitHeight, Theme.itemSizeExtraLarge * 1.5 )
-                } else content.length ? ( contentWarningLabel.paintedHeight > paintedHeight ? contentWarningLabel.paintedHeight : paintedHeight ) : 0
+                } else (typeof content !== "undefined" && content.length) ? ( contentWarningLabel.paintedHeight > paintedHeight ? contentWarningLabel.paintedHeight : paintedHeight ) : 0
         anchors {
             left: miniHeader.left
             leftMargin: Theme.paddingMedium
@@ -390,12 +390,12 @@ BackgroundItem {
         Rectangle {
             id: contentWarningBg
             color: Theme.highlightDimmerColor
-            visible: status_spoiler_text.length > 0
+            visible: typeof status_spoiler_text !== "undefined" && status_spoiler_text.length > 0
             anchors.fill: parent
 
             Label {
                 id: contentWarningLabel
-                text: model.status_spoiler_text
+                text: typeof model.status_spoiler_text !== "undefined" ? model.status_spoiler_text : ""
                 font.pixelSize: Theme.fontSizeExtraSmall
                 color: Theme.highlightColor
                 truncationMode: TruncationMode.Fade
@@ -937,7 +937,7 @@ BackgroundItem {
             }
 
             Label {
-                text: status_favourites_count
+                text: typeof status_favourites_count !== "undefined" ? status_favourites_count : 0
                 font.pixelSize: Theme.fontSizeSmall
                 color: !model.status_favourited ? Theme.highlightColor : Theme.primaryColor
                 anchors {
@@ -979,7 +979,7 @@ BackgroundItem {
             }
 
             Label {
-                text: status_reblogs_count
+                text: typeof status_reblogs_count !== "undefined" ? status_reblogs_count : 0
                 font.pixelSize: Theme.fontSizeSmall
                 color: !model.status_reblogged ? Theme.highlightColor : Theme.primaryColor
                 anchors {
