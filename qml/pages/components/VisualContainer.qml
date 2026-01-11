@@ -316,6 +316,48 @@ BackgroundItem {
         }
     }
 
+    // Reply indicator - shows when toot is a reply to another toot
+    Row {
+        id: replyIndicator
+        visible: model.type !== "gap" && typeof model.status_in_reply_to_id !== "undefined" && model.status_in_reply_to_id && model.status_in_reply_to_id.length > 0
+        spacing: Theme.paddingSmall
+        anchors {
+            left: miniHeader.left
+            leftMargin: Theme.paddingMedium
+            top: miniHeader.bottom
+            topMargin: Theme.paddingSmall / 2
+        }
+
+        Icon {
+            id: replyIcon
+            source: "image://theme/icon-s-repost"  // Reply/thread icon
+            width: Theme.iconSizeExtraSmall
+            height: width
+            color: Theme.secondaryColor
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
+        Label {
+            text: {
+                // Get the first mention as the reply target
+                if (typeof model.status_mentions !== "undefined" && model.status_mentions && model.status_mentions.length > 0) {
+                    var firstMention = model.status_mentions.split(',')[0]
+                    if (appWindow.fullUsernames) {
+                        return qsTr("replying to @%1").arg(firstMention)
+                    } else {
+                        // Show short username
+                        var shortName = firstMention.indexOf('@') > 0 ? firstMention.split('@')[0] : firstMention
+                        return qsTr("replying to @%1").arg(shortName)
+                    }
+                }
+                return qsTr("replying to thread")
+            }
+            font.pixelSize: Theme.fontSizeTiny
+            color: Theme.secondaryColor
+            anchors.verticalCenter: parent.verticalCenter
+        }
+    }
+
     // Cache processed content to avoid regex on every press state change
     // Compute base content (truncated if needed) once, then derive styled versions
     property string baseDisplayContent: {
@@ -362,7 +404,7 @@ BackgroundItem {
             leftMargin: Theme.paddingMedium
             right: miniHeader.right
             rightMargin: Theme.horizontalPageMargin + Theme.paddingMedium
-            top: miniHeader.bottom
+            top: replyIndicator.visible ? replyIndicator.bottom : miniHeader.bottom
             topMargin: Theme.paddingSmall
             bottomMargin: Theme.paddingLarge
         }
