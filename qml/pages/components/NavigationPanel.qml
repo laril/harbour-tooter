@@ -197,7 +197,7 @@ SilicaGridView {
             Connections {
                 ignoreUnknownSignals: true
                 target: !showMenuOnPressAndHold || Logic.conf.multipleAccountsHintCompleted
-                        ? undefined : gridView
+                        ? null : gridView
                 onIsPortraitChanged: hint.updateRunning()
             }
 
