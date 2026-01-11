@@ -47,6 +47,47 @@ BackgroundItem {
     // Shared empty model to avoid creating new ListModel objects for toots without attachments
     property ListModel emptyAttachmentsModel: ListModel {}
 
+    // Function to fetch fresh status stats from the server
+    function refreshStatusStats() {
+        if (!model.status_id || model.type === "follow" || model.type === "gap") return
+
+        var account = Logic.conf.accounts && Logic.conf.accounts[Logic.conf.activeAccount]
+        if (!account || !account.instance || !account.api_user_token) return
+
+        var url = account.instance + "/api/v1/statuses/" + model.status_id
+        var http = new XMLHttpRequest()
+        http.open("GET", url, true)
+        http.setRequestHeader("Authorization", "Bearer " + account.api_user_token)
+        http.setRequestHeader("Content-Type", "application/json")
+
+        http.onreadystatechange = function() {
+            if (http.readyState === 4 && http.status === 200) {
+                try {
+                    var data = JSON.parse(http.responseText)
+                    // Update model with fresh counts
+                    if (typeof data.replies_count !== "undefined")
+                        model.status_replies_count = data.replies_count
+                    if (typeof data.reblogs_count !== "undefined")
+                        model.status_reblogs_count = data.reblogs_count
+                    if (typeof data.favourites_count !== "undefined")
+                        model.status_favourites_count = data.favourites_count
+                    // Also update interaction states in case they changed
+                    if (typeof data.favourited !== "undefined")
+                        model.status_favourited = data.favourited
+                    if (typeof data.reblogged !== "undefined")
+                        model.status_reblogged = data.reblogged
+                    if (typeof data.bookmarked !== "undefined")
+                        model.status_bookmarked = data.bookmarked
+                    if (debug) console.log("Refreshed stats: replies=" + data.replies_count +
+                        " reblogs=" + data.reblogs_count + " favs=" + data.favourites_count)
+                } catch (e) {
+                    console.log("Error parsing status response: " + e)
+                }
+            }
+        }
+        http.send()
+    }
+
     signal send (string notice)
     signal navigateTo(string link)
 
@@ -55,7 +96,7 @@ BackgroundItem {
     // Gap item UI - "Load more" button for timeline gaps
     Item {
         id: gapLoader
-        visible: model.type === "gap"
+        visible: model && model.type === "gap"
         width: parent.width
         height: visible ? Theme.itemSizeLarge : 0
 
@@ -103,7 +144,9 @@ BackgroundItem {
         }
     }
 
-    height: if (model.type === "gap") {
+    height: if (!model) {
+                0
+            } else if (model.type === "gap") {
                 gapLoader.height
             } else if (myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" )) {
                 mnu.height + miniHeader.height + Theme.paddingLarge + lblContent.height + Theme.paddingLarge + (miniStatus.visible ? miniStatus.height : 0)
@@ -114,7 +157,7 @@ BackgroundItem {
         id: bgDirect
         x: 0
         y: 0
-        visible: model.type !== "gap" && model.status_visibility === "direct"
+        visible: model && model.type !== "gap" && model.status_visibility === "direct"
         width: parent.width
         height: parent.height
         opacity: 0.3
@@ -138,7 +181,7 @@ BackgroundItem {
     // Stacked avatars for grouped notifications (v2 API)
     Row {
         id: stackedAvatars
-        visible: model.type !== "gap" && typeof model.notifications_count !== "undefined" && model.notifications_count > 1 && typeof model.grouped_account_count !== "undefined" && model.grouped_account_count > 1
+        visible: model && model.type !== "gap" && typeof model.notifications_count !== "undefined" && model.notifications_count > 1 && typeof model.grouped_account_count !== "undefined" && model.grouped_account_count > 1
         spacing: -Theme.paddingSmall * 1.5  // Negative spacing for overlap
         anchors {
             top: miniStatus.visible ? miniStatus.bottom : parent.top
@@ -188,7 +231,7 @@ BackgroundItem {
     // Account avatar (hidden when showing stacked avatars or for gap items)
     Image {
         id: avatar
-        visible: model.type !== "gap" && !stackedAvatars.visible
+        visible: model && model.type !== "gap" && !stackedAvatars.visible
         opacity: status === Image.Ready ? 1.0 : 0.0
         Behavior on opacity { FadeAnimator {} }
         asynchronous: true
@@ -233,7 +276,7 @@ BackgroundItem {
 
         // Avatar dimmer for facourite and reblog notifications
         Rectangle {
-            visible: myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" )
+            visible: model && myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" )
             opacity: 0.5
             color: Theme.highlightDimmerColor
             anchors.fill: avatar
@@ -308,7 +351,7 @@ BackgroundItem {
     // Display name, username, date of Toot
     MiniHeader {
         id: miniHeader
-        visible: model.type !== "gap"
+        visible: model && model.type !== "gap"
         anchors {
             top: stackedAvatars.visible ? stackedAvatars.top : avatar.top
             left: stackedAvatars.visible ? stackedAvatars.right : avatar.right
@@ -319,7 +362,7 @@ BackgroundItem {
     // Reply indicator - shows when toot is a reply to another toot
     Row {
         id: replyIndicator
-        visible: model.type !== "gap" && model.type !== "follow" && typeof model.status_in_reply_to_id !== "undefined" && model.status_in_reply_to_id && String(model.status_in_reply_to_id).length > 0
+        visible: model && model.type !== "gap" && model.type !== "follow" && typeof model.status_in_reply_to_id !== "undefined" && model.status_in_reply_to_id && String(model.status_in_reply_to_id).length > 0
         spacing: Theme.paddingSmall
         anchors {
             left: miniHeader.left
@@ -361,6 +404,7 @@ BackgroundItem {
     // Cache processed content to avoid regex on every press state change
     // Compute base content (truncated if needed) once, then derive styled versions
     property string baseDisplayContent: {
+        if (!model) return ""
         var displayContent = typeof content !== "undefined" ? content : ""
         // Truncate if long post and not expanded (not for notifications)
         // In conversation view, don't truncate the main clicked toot
@@ -373,7 +417,7 @@ BackgroundItem {
     }
 
     // Pre-compute both color variants - regex only runs when content changes, not on press
-    property bool isNotificationCompact: myList.type === "notifications" && (model.type === "favourite" || model.type === "reblog")
+    property bool isNotificationCompact: model && myList.type === "notifications" && (model.type === "favourite" || model.type === "reblog")
     property string processedContent: isNotificationCompact ? baseDisplayContent :
         baseDisplayContent.replace(/<a /g, '<a style="text-decoration: none; color:' + Theme.highlightColor + ';" ')
     property string processedContentPressed: isNotificationCompact ? baseDisplayContent :
@@ -382,19 +426,19 @@ BackgroundItem {
     // Toot content
     Label  {
         id: lblContent
-        visible: model.type !== "gap" && model.type !== "follow"
+        visible: model && model.type !== "gap" && model.type !== "follow"
         text: pressed ? processedContentPressed : processedContent
-        textFormat: myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" ) ? Text.StyledText : Text.RichText
+        textFormat: model && myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" ) ? Text.StyledText : Text.RichText
         font.pixelSize: Theme.fontSizeSmall * appWindow.fontScale
         wrapMode: Text.Wrap
         truncationMode: TruncationMode.Elide
-        color: if (myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" )) {
+        color: if (model && myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" )) {
                    (pressed ? Theme.secondaryHighlightColor : (!highlight ? Theme.secondaryColor : Theme.secondaryHighlightColor))
                } else (pressed ? Theme.highlightColor : (!highlight ? Theme.primaryColor : Theme.secondaryColor))
-        linkColor: if (myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" )) {
+        linkColor: if (model && myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" )) {
                        Theme.secondaryHighlightColor
                    } else (pressed ? Theme.secondaryColor : Theme.highlightColor)
-        height: if (model.type === "follow") {
+        height: if (!model || model.type === "follow") {
                     Theme.paddingLarge
                 } else if (myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" )) {
                     Math.min( implicitHeight, Theme.itemSizeExtraLarge * 1.5 )
@@ -704,7 +748,7 @@ BackgroundItem {
     // Displays media in Toots
     MediaBlock {
         id: media
-        visible: model.type !== "gap" && ((myList.type === "notifications" && ( type === "favourite" || type === "reblog" )) ? false : true)
+        visible: model && model.type !== "gap" && ((myList.type === "notifications" && ( type === "favourite" || type === "reblog" )) ? false : true)
         model: typeof attachments !== "undefined" ? attachments : emptyAttachmentsModel
         height: Theme.iconSizeExtraLarge * 2
         anchors {
@@ -722,7 +766,7 @@ BackgroundItem {
     Rectangle {
         id: linkPreview
         visible: {
-            if (model.type === "gap") return false
+            if (!model || model.type === "gap") return false
             if (myList.type === "notifications" && (model.type === "favourite" || model.type === "reblog")) return false
             // Require both URL and title to avoid showing empty card boxes
             return typeof model.card_url !== "undefined" && model.card_url.length > 0
@@ -947,11 +991,14 @@ BackgroundItem {
     // Context menu for Toots (hidden for gap items)
     ContextMenu {
         id: mnu
-        visible: model.type !== "gap"
+        visible: model && model.type !== "gap"
+
+        // Fetch fresh stats when menu opens
+        onActiveChanged: if (active) refreshStatusStats()
 
         MenuItem {
             id: mnuFavourite
-            visible: model.type !== "follow"
+            visible: model && model.type !== "follow"
             text: typeof model.status_favourited !== "undefined" && model.status_favourited ? qsTr("Unfavorite") : qsTr("Favorite")
             onClicked: {
                 var status = typeof model.status_favourited !== "undefined" && model.status_favourited
@@ -992,8 +1039,8 @@ BackgroundItem {
 
         MenuItem {
             id: mnuBoost
-            visible: model.type !== "follow"
-            enabled: model.status_visibility !== "direct"
+            visible: model && model.type !== "follow"
+            enabled: model && model.status_visibility !== "direct"
             text: typeof model.status_reblogged !== "undefined" && model.status_reblogged ? qsTr("Unboost") : qsTr("Boost")
             onClicked: {
                 var status = typeof model.status_reblogged !== "undefined" && model.status_reblogged
@@ -1034,7 +1081,7 @@ BackgroundItem {
 
         MenuItem {
             id: mnuReply
-            visible: model.type !== "follow"
+            visible: model && model.type !== "follow"
             text: qsTr("Reply")
             onClicked: {
                 var m = Qt.createQmlObject('import QtQuick 2.0; ListModel { dynamicRoles:true }', Qt.application, 'InternalQmlObject');
@@ -1087,12 +1134,23 @@ BackgroundItem {
                     verticalCenter: parent.verticalCenter
                 }
             }
+
+            Label {
+                text: typeof status_replies_count !== "undefined" ? status_replies_count : 0
+                font.pixelSize: Theme.fontSizeSmall
+                color: Theme.highlightColor
+                anchors {
+                    left: icReply.right
+                    leftMargin: Theme.paddingMedium
+                    verticalCenter: parent.verticalCenter
+                }
+            }
         }
 
         MenuItem {
             id: mnuQuote
-            visible: model.type !== "follow"
-            enabled: model.status_visibility !== "direct"
+            visible: model && model.type !== "follow"
+            enabled: model && model.status_visibility !== "direct"
             text: qsTr("Quote")
             onClicked: {
                 pageStack.push(Qt.resolvedUrl("../ConversationPage.qml"), {
@@ -1121,7 +1179,7 @@ BackgroundItem {
 
         MenuItem {
             id: mnuBookmark
-            visible: model.type !== "follow"
+            visible: model && model.type !== "follow"
             text: typeof model.status_bookmarked !== "undefined" && model.status_bookmarked ? qsTr("Remove Bookmark") : qsTr("Bookmark")
             onClicked: {
                 var status = typeof model.status_bookmarked !== "undefined" && model.status_bookmarked
@@ -1153,7 +1211,7 @@ BackgroundItem {
             id: mnuDelete
             // Only show for user's own posts
             visible: {
-                if (model.type === "follow") return false
+                if (!model || model.type === "follow") return false
                 var activeAccount = Logic.conf.accounts && Logic.conf.accounts[Logic.conf.activeAccount]
                 if (!activeAccount || !activeAccount.userInfo) return false
                 var myUsername = activeAccount.userInfo.account_username
@@ -1188,7 +1246,7 @@ BackgroundItem {
             id: mnuEdit
             // Only show for user's own posts
             visible: {
-                if (model.type === "follow") return false
+                if (!model || model.type === "follow") return false
                 var activeAccount = Logic.conf.accounts && Logic.conf.accounts[Logic.conf.activeAccount]
                 if (!activeAccount || !activeAccount.userInfo) return false
                 var myUsername = activeAccount.userInfo.account_username
@@ -1219,7 +1277,7 @@ BackgroundItem {
 
         MenuItem {
             id: mnuMention
-            visible: model.type === "follow"
+            visible: model && model.type === "follow"
             text: qsTr("Mention")
             onClicked: {
                 pageStack.push(Qt.resolvedUrl("../ConversationPage.qml"), {

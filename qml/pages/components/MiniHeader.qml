@@ -12,7 +12,7 @@ Item {
         text: account_display_name ? account_display_name : (typeof account_username !== "undefined" && account_username ? account_username.split('@')[0] : "")
         font.weight: Font.Bold
         font.pixelSize: Theme.fontSizeSmall
-        color: if ( myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" )) {
+        color: if ( model && myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" )) {
                    ( pressed ? Theme.secondaryHighlightColor : (!highlight ? Theme.secondaryColor : Theme.secondaryHighlightColor ))
                } else ( pressed ? Theme.highlightColor : ( !highlight ? Theme.primaryColor : Theme.secondaryColor ))
         truncationMode: TruncationMode.Fade
@@ -25,7 +25,7 @@ Item {
 
     Label {
         id: lblScreenName
-        visible: model.type !== "follow"
+        visible: model && model.type !== "follow"
         text: '@' + (appWindow.fullUsernames && typeof account_acct !== "undefined" ? account_acct : (typeof account_username !== "undefined" ? account_username : ""))
         font.pixelSize: Theme.fontSizeExtraSmall
         color: ( pressed ? Theme.secondaryHighlightColor : Theme.secondaryColor )
@@ -41,7 +41,7 @@ Item {
 
     Label {
         id: lblScreenNameFollow
-        visible: model.type === "follow"
+        visible: model && model.type === "follow"
         text: '@' + (appWindow.fullUsernames && typeof account_acct !== "undefined" ? account_acct : (typeof account_username !== "undefined" ? account_username : ""))
         font.pixelSize: Theme.fontSizeExtraSmall
         color: ( pressed ? Theme.secondaryHighlightColor : Theme.secondaryColor )
