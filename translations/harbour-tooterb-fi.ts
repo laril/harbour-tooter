@@ -548,5 +548,13 @@
         <source>minutes left</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>replying to @%1</source>
+        <translation>vastaa käyttäjälle @%1</translation>
+    </message>
+    <message>
+        <source>replying to thread</source>
+        <translation>vastaa ketjuun</translation>
+    </message>
 </context>
 </TS>

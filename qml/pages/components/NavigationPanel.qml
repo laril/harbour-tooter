@@ -218,7 +218,7 @@ SilicaGridView {
                 if (listModel.get(i).slug === "notifications") {
                     listModel.setProperty(i, 'unread', false);
                     // Also update last seen timestamp for cover page
-                    if (Logic.modelTLnotifications.count > 0) {
+                    if (Logic.modelTLnotifications && Logic.modelTLnotifications.count > 0) {
                         var newestItem = Logic.modelTLnotifications.get(0)
                         Logic.conf.notificationLastTimestamp = newestItem.created_at ? new Date(newestItem.created_at).getTime() : 0
                     }
@@ -237,8 +237,9 @@ SilicaGridView {
     property real lastCheckedTimestamp: 0
 
     Connections {
-        target: Logic.modelTLnotifications
+        target: Logic.modelTLnotifications || null
         onCountChanged: {
+            if (!Logic.modelTLnotifications) return
             var newCount = Logic.modelTLnotifications.count
             if (newCount === 0) return
 

@@ -725,6 +725,8 @@ function parseToot (data) {
         item['status_replies_count'] = data["reblog"]["replies_count"]
         item['status_reblogs_count'] = data["reblog"]["reblogs_count"]
         item['status_favourites_count'] = data["reblog"]["favourites_count"]
+        item['status_in_reply_to_id'] = data["reblog"]["in_reply_to_id"]
+        item['status_in_reply_to_account_id'] = data["reblog"]["in_reply_to_account_id"]
         item['content'] = data["reblog"]["content"]
         item = parseAccounts(item, "", data['reblog']["account"])
         item = parseAccounts(item, "reblog_", data["account"])

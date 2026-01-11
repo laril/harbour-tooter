@@ -107,7 +107,7 @@ BackgroundItem {
                 gapLoader.height
             } else if (myList.type === "notifications" && ( model.type === "favourite" || model.type === "reblog" )) {
                 mnu.height + miniHeader.height + Theme.paddingLarge + lblContent.height + Theme.paddingLarge + (miniStatus.visible ? miniStatus.height : 0)
-            } else mnu.height + miniHeader.height + (typeof attachments !== "undefined" && attachments.count ? media.height + Theme.paddingLarge + Theme.paddingMedium: Theme.paddingLarge) + lblContent.height + (isLongPost ? showMoreLabel.height : 0) + (pollContainer.visible ? pollContainer.childrenRect.height + Theme.paddingMedium : 0) + (linkPreview.visible ? linkPreview.height + Theme.paddingMedium : 0) + (quotedPost.visible ? quotedPost.height + Theme.paddingMedium : 0) + Theme.paddingLarge + (miniStatus.visible ? miniStatus.height : 0) + (iconDirectMsg.visible ? iconDirectMsg.height : 0)
+            } else mnu.height + miniHeader.height + (replyIndicator.visible ? replyIndicator.height + Theme.paddingSmall : 0) + (typeof attachments !== "undefined" && attachments.count ? media.height + Theme.paddingLarge + Theme.paddingMedium: Theme.paddingLarge) + lblContent.height + (isLongPost ? showMoreLabel.height : 0) + (pollContainer.visible ? pollContainer.childrenRect.height + Theme.paddingMedium : 0) + (linkPreview.visible ? linkPreview.height + Theme.paddingMedium : 0) + (quotedPost.visible ? quotedPost.height + Theme.paddingMedium : 0) + Theme.paddingLarge + (miniStatus.visible ? miniStatus.height : 0) + (iconDirectMsg.visible ? iconDirectMsg.height : 0)
 
     // Background for Direct Messages in Notification View
     Rectangle {
@@ -319,7 +319,7 @@ BackgroundItem {
     // Reply indicator - shows when toot is a reply to another toot
     Row {
         id: replyIndicator
-        visible: model.type !== "gap" && typeof model.status_in_reply_to_id !== "undefined" && model.status_in_reply_to_id && model.status_in_reply_to_id.length > 0
+        visible: model.type !== "gap" && model.type !== "follow" && typeof model.status_in_reply_to_id !== "undefined" && model.status_in_reply_to_id && String(model.status_in_reply_to_id).length > 0
         spacing: Theme.paddingSmall
         anchors {
             left: miniHeader.left

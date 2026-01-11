@@ -101,8 +101,8 @@ CoverBackground {
 
     // Update notification count when model changes
     Connections {
-        target: Logic.modelTLnotifications
-        onCountChanged: checkNotifications()
+        target: Logic.modelTLnotifications || null
+        onCountChanged: if (coverPage.status !== PageStatus.Inactive) checkNotifications()
     }
 
     Label {
@@ -138,6 +138,9 @@ CoverBackground {
     }
     function checkNotifications(){
         console.log("checkNotifications")
+        // Guard against access when model is not ready
+        if (!Logic.modelTLnotifications) return
+
         var notificationsNum = 0
         var lastSeenTimestamp = Logic.conf.notificationLastTimestamp || 0
 
@@ -166,7 +169,7 @@ CoverBackground {
 
     // Clear notification count when user views notifications
     function markNotificationsRead() {
-        if (Logic.modelTLnotifications.count > 0) {
+        if (Logic.modelTLnotifications && Logic.modelTLnotifications.count > 0) {
             var newestItem = Logic.modelTLnotifications.get(0)
             Logic.conf.notificationLastTimestamp = newestItem.created_at ? new Date(newestItem.created_at).getTime() : 0
         }
