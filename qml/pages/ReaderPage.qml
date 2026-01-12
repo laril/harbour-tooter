@@ -1,7 +1,5 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
-import "../lib/JSDOMParser.js" as JSDOMParser
-import "../lib/Readability.js" as Readability
 
 Page {
     id: readerPage
@@ -32,10 +30,9 @@ Page {
             if (http.readyState === 4) {
                 console.log("ReaderPage: Got response, status=" + http.status)
                 if (http.status === 200) {
-                    parseArticle(http.responseText)
+                    parseArticleSimple(http.responseText)
                 } else if (http.status === 0) {
-                    // CORS or network error
-                    errorMessage = qsTr("Could not fetch article (network error or CORS)")
+                    errorMessage = qsTr("Could not fetch article (network error)")
                     loading = false
                 } else {
                     errorMessage = qsTr("Failed to load article (HTTP %1)").arg(http.status)
@@ -53,31 +50,88 @@ Page {
         http.send()
     }
 
-    function parseArticle(html) {
+    // Simple HTML to readable text extraction (fallback approach)
+    function parseArticleSimple(html) {
         console.log("ReaderPage: Parsing article, html length=" + html.length)
         try {
-            // Use JSDOMParser to create DOM from HTML
-            var parser = new JSDOMParser.JSDOMParser()
-            var doc = parser.parse(html, articleUrl)
-            console.log("ReaderPage: DOM parsed")
+            // Extract title from <title> tag
+            var titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i)
+            if (titleMatch) {
+                articleTitle = titleMatch[1].replace(/\s+/g, ' ').trim()
+            }
 
-            // Use Readability to extract article
-            var reader = new Readability.Readability(doc)
-            var article = reader.parse()
+            // Try to get og:site_name
+            var siteMatch = html.match(/<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)["']/i)
+            if (!siteMatch) {
+                siteMatch = html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:site_name["']/i)
+            }
+            if (siteMatch) {
+                articleSiteName = siteMatch[1]
+            }
 
-            if (article) {
-                console.log("ReaderPage: Article extracted - " + article.title)
-                articleTitle = article.title || ""
-                articleContent = article.content || ""
-                articleByline = article.byline || ""
-                articleSiteName = article.siteName || ""
+            // Try to get article content - look for <article> or <main> or common content divs
+            var content = html
+
+            // Remove scripts, styles, nav, header, footer, aside
+            content = content.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+            content = content.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+            content = content.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
+            content = content.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '')
+            content = content.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
+            content = content.replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, '')
+            content = content.replace(/<form[^>]*>[\s\S]*?<\/form>/gi, '')
+            content = content.replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, '')
+
+            // Try to extract just the article or main content
+            var articleMatch = content.match(/<article[^>]*>([\s\S]*?)<\/article>/i)
+            if (articleMatch) {
+                content = articleMatch[1]
             } else {
-                console.log("ReaderPage: Readability returned null")
+                var mainMatch = content.match(/<main[^>]*>([\s\S]*?)<\/main>/i)
+                if (mainMatch) {
+                    content = mainMatch[1]
+                } else {
+                    // Look for common content class names
+                    var contentMatch = content.match(/<div[^>]+class=["'][^"']*(?:content|article|post|entry|story)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)
+                    if (contentMatch) {
+                        content = contentMatch[1]
+                    }
+                }
+            }
+
+            // Convert block elements to preserve structure
+            content = content.replace(/<\/p>/gi, '\n\n')
+            content = content.replace(/<\/div>/gi, '\n')
+            content = content.replace(/<\/h[1-6]>/gi, '\n\n')
+            content = content.replace(/<br\s*\/?>/gi, '\n')
+            content = content.replace(/<li>/gi, '• ')
+            content = content.replace(/<\/li>/gi, '\n')
+
+            // Remove remaining HTML tags
+            content = content.replace(/<[^>]+>/g, '')
+
+            // Decode HTML entities
+            content = content.replace(/&nbsp;/g, ' ')
+            content = content.replace(/&amp;/g, '&')
+            content = content.replace(/&lt;/g, '<')
+            content = content.replace(/&gt;/g, '>')
+            content = content.replace(/&quot;/g, '"')
+            content = content.replace(/&#39;/g, "'")
+
+            // Clean up whitespace
+            content = content.replace(/[ \t]+/g, ' ')
+            content = content.replace(/\n\s*\n\s*\n/g, '\n\n')
+            content = content.trim()
+
+            if (content.length > 100) {
+                articleContent = content
+                console.log("ReaderPage: Extracted " + content.length + " chars")
+            } else {
                 errorMessage = qsTr("Could not extract article content")
             }
         } catch (e) {
             console.log("ReaderPage: Parse error - " + e)
-            errorMessage = qsTr("Error parsing article: %1").arg(e.message || e)
+            errorMessage = qsTr("Error parsing article")
         }
         loading = false
     }
@@ -121,7 +175,7 @@ Page {
             Column {
                 visible: !loading && errorMessage.length > 0
                 width: parent.width - Theme.horizontalPageMargin * 2
-                anchors.horizontalCenter: parent.horizontalCenter
+                x: Theme.horizontalPageMargin
                 spacing: Theme.paddingLarge
 
                 Label {
@@ -151,25 +205,14 @@ Page {
                 color: Theme.highlightColor
                 wrapMode: Text.Wrap
                 width: parent.width - Theme.horizontalPageMargin * 2
-                anchors.horizontalCenter: parent.horizontalCenter
-            }
-
-            // Byline
-            Label {
-                visible: !loading && articleByline.length > 0
-                text: articleByline
-                font.pixelSize: Theme.fontSizeSmall
-                color: Theme.secondaryColor
-                wrapMode: Text.Wrap
-                width: parent.width - Theme.horizontalPageMargin * 2
-                anchors.horizontalCenter: parent.horizontalCenter
+                x: Theme.horizontalPageMargin
             }
 
             // Separator
             Separator {
                 visible: !loading && articleTitle.length > 0
                 width: parent.width - Theme.horizontalPageMargin * 2
-                anchors.horizontalCenter: parent.horizontalCenter
+                x: Theme.horizontalPageMargin
                 color: Theme.primaryColor
                 horizontalAlignment: Qt.AlignHCenter
             }
@@ -181,10 +224,8 @@ Page {
                 font.pixelSize: Theme.fontSizeSmall
                 color: Theme.primaryColor
                 wrapMode: Text.Wrap
-                textFormat: Text.RichText
                 width: parent.width - Theme.horizontalPageMargin * 2
-                anchors.horizontalCenter: parent.horizontalCenter
-                onLinkActivated: Qt.openUrlExternally(link)
+                x: Theme.horizontalPageMargin
             }
         }
 

@@ -1,12 +1,12 @@
 import QtQuick 2.0
 import Sailfish.Silica 1.0
 
-Dialog {
-    id: linkDialog
+Page {
+    id: linkOptionsPage
     property string url: ""
     property bool openInReader: false
 
-    canAccept: true
+    signal optionSelected(bool useReader)
 
     SilicaFlickable {
         anchors.fill: parent
@@ -17,9 +17,8 @@ Dialog {
             width: parent.width
             spacing: Theme.paddingLarge
 
-            DialogHeader {
+            PageHeader {
                 title: qsTr("Open Link")
-                acceptText: qsTr("Cancel")
             }
 
             // URL display
@@ -29,7 +28,7 @@ Dialog {
                 color: Theme.secondaryColor
                 wrapMode: Text.Wrap
                 width: parent.width - Theme.horizontalPageMargin * 2
-                anchors.horizontalCenter: parent.horizontalCenter
+                x: Theme.horizontalPageMargin
                 maximumLineCount: 3
                 truncationMode: TruncationMode.Fade
             }
@@ -42,8 +41,9 @@ Dialog {
                 text: qsTr("Reader Mode")
                 anchors.horizontalCenter: parent.horizontalCenter
                 onClicked: {
-                    openInReader = true
-                    accept()
+                    pageStack.push(Qt.resolvedUrl("ReaderPage.qml"), {
+                        articleUrl: url
+                    })
                 }
             }
 
@@ -52,8 +52,8 @@ Dialog {
                 text: qsTr("Open in Browser")
                 anchors.horizontalCenter: parent.horizontalCenter
                 onClicked: {
-                    openInReader = false
-                    accept()
+                    Qt.openUrlExternally(url)
+                    pageStack.pop()
                 }
             }
 
@@ -63,7 +63,7 @@ Dialog {
                 anchors.horizontalCenter: parent.horizontalCenter
                 onClicked: {
                     Clipboard.text = url
-                    reject()  // Close dialog after copying
+                    pageStack.pop()
                 }
             }
         }

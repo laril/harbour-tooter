@@ -467,18 +467,9 @@ BackgroundItem {
                     return check
                 }))
             } else {
-                // Unknown URL - show options dialog (reader mode or browser)
-                var dialog = pageStack.push(Qt.resolvedUrl("../LinkOptionsDialog.qml"), {
+                // Unknown URL - show options page (reader mode or browser)
+                pageStack.push(Qt.resolvedUrl("../LinkOptionsDialog.qml"), {
                     url: link
-                })
-                dialog.accepted.connect(function() {
-                    if (dialog.openInReader) {
-                        pageStack.push(Qt.resolvedUrl("../ReaderPage.qml"), {
-                            articleUrl: link
-                        })
-                    } else {
-                        Qt.openUrlExternally(link)
-                    }
                 })
             }
         }
