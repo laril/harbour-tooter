@@ -719,7 +719,7 @@ function parseToot (data) {
         item['typeIcon'] = "image://theme/icon-s-retweet"
         item['status_id'] = data["reblog"]["id"]
         // Use the original toot's timestamp, not the boost timestamp
-        item['status_created_at'] = new Date(data["reblog"]["created_at"])
+        item['created_at'] = item['status_created_at'] = new Date(data["reblog"]["created_at"])
         item['status_sensitive'] = data["reblog"]["sensitive"]
         item['status_spoiler_text'] = data["reblog"]["spoiler_text"]
         item['status_replies_count'] = data["reblog"]["replies_count"]
