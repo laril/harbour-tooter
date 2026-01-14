@@ -467,10 +467,16 @@ BackgroundItem {
                     return check
                 }))
             } else {
-                // Unknown URL - show options page (reader mode or browser)
-                pageStack.push(Qt.resolvedUrl("../LinkOptionsDialog.qml"), {
-                    url: link
-                })
+                // Unknown URL - open in reader mode or browser based on setting
+                if (appWindow.openLinksInReader) {
+                    console.log("VisualContainer: Opening in reader mode: " + link)
+                    pageStack.push(Qt.resolvedUrl("../ReaderPage.qml"), {
+                        articleUrl: link
+                    })
+                } else {
+                    console.log("VisualContainer: Opening in browser: " + link)
+                    Qt.openUrlExternally(link)
+                }
             }
         }
 
@@ -788,7 +794,16 @@ BackgroundItem {
 
         MouseArea {
             anchors.fill: parent
-            onClicked: Qt.openUrlExternally(model.card_url)
+            onClicked: {
+                if (appWindow.openLinksInReader) {
+                    console.log("VisualContainer: Opening link preview in reader mode: " + model.card_url)
+                    pageStack.push(Qt.resolvedUrl("../ReaderPage.qml"), {
+                        articleUrl: model.card_url
+                    })
+                } else {
+                    Qt.openUrlExternally(model.card_url)
+                }
+            }
         }
 
         // Thumbnail (if available)

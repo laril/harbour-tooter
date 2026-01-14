@@ -861,6 +861,287 @@ uniqueIds = removeDuplicates(uniqueIds)
 
 ---
 
+### 1.13 In-App Reader Mode
+**Effort:** 6-10 hours | **Priority:** Medium
+
+**Problem:** When users tap links in toots, they open in the external browser. This breaks the app experience and can be slow. A reader mode would fetch article content and display it in a clean, readable format within the app.
+
+**Technical Research:**
+- Mozilla's [Readability.js](https://github.com/mozilla/readability) extracts article content from web pages
+- Version 0.3.0 is **ES5 compatible** (works with Qt 5.6's JavaScript engine)
+- Includes [JSDOMParser.js](https://github.com/mozilla/readability/blob/0.3.0/JSDOMParser.js) - lightweight DOM parser for non-browser environments
+- Both files explicitly use `/*eslint-env es6:false*/` confirming ES5 compatibility
+
+**Compatibility Verification:**
+| Feature | Readability.js 0.3.0 | JSDOMParser.js 0.3.0 | Qt 5.6 V4 Engine |
+|---------|---------------------|----------------------|------------------|
+| `var` only | ✅ | ✅ | ✅ Supported |
+| Traditional functions | ✅ | ✅ | ✅ Supported |
+| No template literals | ✅ | ✅ | ✅ N/A |
+| No for...of | ✅ | ✅ | ✅ N/A |
+| No Set/Map | ✅ | ✅ | ✅ N/A |
+| No class keyword | ✅ | ✅ | ✅ N/A |
+
+**Files to create/modify:**
+- `qml/lib/Readability.js` - Mozilla Readability v0.3.0 (ES5)
+- `qml/lib/JSDOMParser.js` - Lightweight DOM parser (ES5)
+- `qml/pages/ReaderPage.qml` - New page for displaying article content
+- `qml/pages/components/VisualContainer.qml` - Modify link handling to offer reader mode
+
+**Implementation:**
+
+1. **Download ES5-compatible libraries:**
+   ```bash
+   # From mozilla/readability v0.3.0
+   curl -o qml/lib/Readability.js https://raw.githubusercontent.com/mozilla/readability/0.3.0/Readability.js
+   curl -o qml/lib/JSDOMParser.js https://raw.githubusercontent.com/mozilla/readability/0.3.0/JSDOMParser.js
+   ```
+
+2. **ReaderPage.qml - Article display page:**
+   ```qml
+   import QtQuick 2.0
+   import Sailfish.Silica 1.0
+   import "../lib/JSDOMParser.js" as JSDOMParser
+   import "../lib/Readability.js" as Readability
+
+   Page {
+       id: readerPage
+       property string articleUrl: ""
+       property string articleHtml: ""
+       property bool loading: true
+       property string errorMessage: ""
+
+       // Parsed article content
+       property string title: ""
+       property string content: ""
+       property string byline: ""
+       property string siteName: ""
+
+       Component.onCompleted: {
+           if (articleUrl) fetchArticle()
+       }
+
+       function fetchArticle() {
+           loading = true
+           var http = new XMLHttpRequest()
+           http.open("GET", articleUrl, true)
+           http.onreadystatechange = function() {
+               if (http.readyState === 4) {
+                   if (http.status === 200) {
+                       parseArticle(http.responseText)
+                   } else {
+                       errorMessage = qsTr("Failed to load article")
+                       loading = false
+                   }
+               }
+           }
+           http.send()
+       }
+
+       function parseArticle(html) {
+           try {
+               // Use JSDOMParser to create DOM from HTML
+               var parser = new JSDOMParser.JSDOMParser()
+               var doc = parser.parse(html, articleUrl)
+
+               // Use Readability to extract article
+               var reader = new Readability.Readability(doc)
+               var article = reader.parse()
+
+               if (article) {
+                   title = article.title || ""
+                   content = article.content || ""
+                   byline = article.byline || ""
+                   siteName = article.siteName || ""
+               } else {
+                   errorMessage = qsTr("Could not extract article content")
+               }
+           } catch (e) {
+               console.log("Reader parse error: " + e)
+               errorMessage = qsTr("Error parsing article")
+           }
+           loading = false
+       }
+
+       SilicaFlickable {
+           anchors.fill: parent
+           contentHeight: column.height
+
+           PullDownMenu {
+               MenuItem {
+                   text: qsTr("Open in browser")
+                   onClicked: Qt.openUrlExternally(articleUrl)
+               }
+           }
+
+           Column {
+               id: column
+               width: parent.width
+               spacing: Theme.paddingMedium
+
+               PageHeader {
+                   title: siteName || qsTr("Reader")
+               }
+
+               // Loading indicator
+               BusyIndicator {
+                   visible: loading
+                   running: loading
+                   size: BusyIndicatorSize.Large
+                   anchors.horizontalCenter: parent.horizontalCenter
+               }
+
+               // Error message
+               Label {
+                   visible: errorMessage.length > 0
+                   text: errorMessage
+                   color: Theme.errorColor
+                   anchors.horizontalCenter: parent.horizontalCenter
+               }
+
+               // Article title
+               Label {
+                   visible: !loading && title.length > 0
+                   text: title
+                   font.pixelSize: Theme.fontSizeLarge
+                   font.bold: true
+                   color: Theme.highlightColor
+                   wrapMode: Text.Wrap
+                   width: parent.width - Theme.horizontalPageMargin * 2
+                   anchors.horizontalCenter: parent.horizontalCenter
+               }
+
+               // Byline
+               Label {
+                   visible: !loading && byline.length > 0
+                   text: byline
+                   font.pixelSize: Theme.fontSizeSmall
+                   color: Theme.secondaryColor
+                   wrapMode: Text.Wrap
+                   width: parent.width - Theme.horizontalPageMargin * 2
+                   anchors.horizontalCenter: parent.horizontalCenter
+               }
+
+               // Article content
+               Label {
+                   visible: !loading && content.length > 0
+                   text: content
+                   font.pixelSize: Theme.fontSizeMedium
+                   color: Theme.primaryColor
+                   wrapMode: Text.Wrap
+                   textFormat: Text.RichText
+                   width: parent.width - Theme.horizontalPageMargin * 2
+                   anchors.horizontalCenter: parent.horizontalCenter
+                   onLinkActivated: Qt.openUrlExternally(link)
+               }
+           }
+
+           VerticalScrollDecorator {}
+       }
+   }
+   ```
+
+3. **Modify link handling in VisualContainer.qml:**
+   ```qml
+   // In lblContent onLinkActivated handler
+   onLinkActivated: {
+       // Show dialog with options
+       var dialog = pageStack.push(Qt.resolvedUrl("../LinkOptionsDialog.qml"), {
+           url: link
+       })
+       dialog.accepted.connect(function() {
+           if (dialog.openInReader) {
+               pageStack.push(Qt.resolvedUrl("../ReaderPage.qml"), {
+                   articleUrl: link
+               })
+           } else {
+               Qt.openUrlExternally(link)
+           }
+       })
+   }
+   ```
+
+4. **LinkOptionsDialog.qml - Choice dialog:**
+   ```qml
+   Dialog {
+       id: linkDialog
+       property string url: ""
+       property bool openInReader: false
+
+       Column {
+           width: parent.width
+
+           DialogHeader {
+               title: qsTr("Open Link")
+           }
+
+           Label {
+               text: url
+               font.pixelSize: Theme.fontSizeSmall
+               color: Theme.secondaryColor
+               wrapMode: Text.Wrap
+               width: parent.width - Theme.horizontalPageMargin * 2
+               anchors.horizontalCenter: parent.horizontalCenter
+           }
+
+           Button {
+               text: qsTr("Reader Mode")
+               anchors.horizontalCenter: parent.horizontalCenter
+               onClicked: {
+                   openInReader = true
+                   accept()
+               }
+           }
+
+           Button {
+               text: qsTr("Open in Browser")
+               anchors.horizontalCenter: parent.horizontalCenter
+               onClicked: {
+                   openInReader = false
+                   accept()
+               }
+           }
+       }
+   }
+   ```
+
+**Potential Issues:**
+- JSDOMParser may not handle all HTML edge cases
+- Some sites may block XMLHttpRequest (CORS) - would need to open in browser as fallback
+- Very large articles may cause performance issues
+- Images within articles won't load (would need additional handling)
+
+**Alternative Simpler Approach:**
+If Readability.js doesn't work reliably in QML, a simpler fallback:
+```javascript
+// Basic HTML to text conversion
+function extractText(html) {
+    // Remove scripts, styles, nav, header, footer
+    html = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    html = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    html = html.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
+    html = html.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '')
+    html = html.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
+    // Convert paragraphs to newlines
+    html = html.replace(/<\/p>/gi, '\n\n')
+    html = html.replace(/<br\s*\/?>/gi, '\n')
+    // Remove remaining tags
+    html = html.replace(/<[^>]+>/g, '')
+    // Clean up whitespace
+    html = html.replace(/\n\s*\n/g, '\n\n').trim()
+    return html
+}
+```
+
+**Testing:**
+- [ ] Fetch and display article from news site
+- [ ] Handle sites that block requests (fallback to browser)
+- [ ] Test with various article lengths
+- [ ] Verify ES5 compatibility in QML environment
+- [ ] Test link clicking within reader view
+
+---
+
 ## Testing Checklist
 
 - [ ] Delete own post
@@ -872,3 +1153,5 @@ uniqueIds = removeDuplicates(uniqueIds)
 - [ ] Grouped notifications display (Mastodon 4.3+)
 - [ ] Performance: smooth scrolling with 100+ items
 - [ ] No duplicate posts in timeline
+- [ ] Reader mode extracts article content
+- [ ] Reader mode fallback to browser works

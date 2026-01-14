@@ -71,15 +71,15 @@
     </message>
     <message>
         <source>Add Media</source>
-        <translation type="unfinished"></translation>
+        <translation>Lisää media</translation>
     </message>
     <message>
         <source>Post Visibility</source>
-        <translation type="unfinished"></translation>
+        <translation>Julkaisun näkyvyys</translation>
     </message>
     <message>
         <source>Post Language</source>
-        <translation type="unfinished"></translation>
+        <translation>Julkaisun kieli</translation>
     </message>
 </context>
 <context>
@@ -174,7 +174,7 @@
     </message>
     <message>
         <source>Conversation</source>
-        <translation type="unfinished">Keskustelu</translation>
+        <translation>Keskustelu</translation>
     </message>
 </context>
 <context>
@@ -330,6 +330,21 @@
     </message>
 </context>
 <context>
+    <name>ReaderPage</name>
+    <message>
+        <source>Share</source>
+        <translation>Jaa</translation>
+    </message>
+    <message>
+        <source>Copy link</source>
+        <translation>Kopioi linkki</translation>
+    </message>
+    <message>
+        <source>Open in browser</source>
+        <translation>Avaa selaimessa</translation>
+    </message>
+</context>
+<context>
     <name>SettingsPage</name>
     <message>
         <source>Settings</source>
@@ -447,11 +462,19 @@
     </message>
     <message>
         <source>Show Full Usernames</source>
-        <translation type="unfinished"></translation>
+        <translation>Näytä täydet käyttäjänimet</translation>
     </message>
     <message>
         <source>Display @user@domain instead of @user</source>
-        <translation type="unfinished"></translation>
+        <translation>Näytä @käyttäjä@instanssi @käyttäjä sijaan</translation>
+    </message>
+    <message>
+        <source>Open Links in Reader Mode</source>
+        <translation>Avaa linkit lukutilassa</translation>
+    </message>
+    <message>
+        <source>Display articles in a clean reading view</source>
+        <translation>Näytä artikkelit selkeässä lukunäkymässä</translation>
     </message>
 </context>
 <context>
@@ -526,27 +549,27 @@
     </message>
     <message>
         <source>Vote</source>
-        <translation type="unfinished"></translation>
+        <translation>Äänestä</translation>
     </message>
     <message>
         <source>votes</source>
-        <translation type="unfinished"></translation>
+        <translation>ääntä</translation>
     </message>
     <message>
         <source>Closed</source>
-        <translation type="unfinished"></translation>
+        <translation>Suljettu</translation>
     </message>
     <message>
         <source>days left</source>
-        <translation type="unfinished"></translation>
+        <translation>päivää jäljellä</translation>
     </message>
     <message>
         <source>hours left</source>
-        <translation type="unfinished"></translation>
+        <translation>tuntia jäljellä</translation>
     </message>
     <message>
         <source>minutes left</source>
-        <translation type="unfinished"></translation>
+        <translation>minuuttia jäljellä</translation>
     </message>
     <message>
         <source>replying to @%1</source>

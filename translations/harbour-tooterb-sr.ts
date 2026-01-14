@@ -331,6 +331,21 @@
     </message>
 </context>
 <context>
+    <name>ReaderPage</name>
+    <message>
+        <source>Share</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy link</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open in browser</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>SettingsPage</name>
     <message>
         <source>Settings</source>
@@ -454,6 +469,14 @@
         <source>Display @user@domain instead of @user</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Open Links in Reader Mode</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Display articles in a clean reading view</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>VisualContainer</name>
@@ -547,6 +570,14 @@
     </message>
     <message>
         <source>minutes left</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>replying to @%1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>replying to thread</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

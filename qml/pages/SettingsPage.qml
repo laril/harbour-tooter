@@ -159,6 +159,17 @@ Page {
                 }
             }
 
+            IconTextSwitch {
+                text: qsTr("Open Links in Reader Mode")
+                description: qsTr("Display articles in a clean reading view")
+                icon.source: "image://theme/icon-m-document"
+                checked: typeof Logic.conf['openLinksInReader'] !== "undefined" && Logic.conf['openLinksInReader']
+                onClicked: {
+                    Logic.conf['openLinksInReader'] = checked
+                    appWindow.openLinksInReader = checked
+                }
+            }
+
             Item {
                 width: parent.width
                 height: fontSizeColumn.height
@@ -380,6 +391,7 @@ Page {
                     }
                 }
             }
+
         }
     }
 }

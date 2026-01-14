@@ -44,6 +44,8 @@ ApplicationWindow {
     property bool fullUsernames: false
     // Instance max characters - fetched from server, default to 500
     property int instanceMaxChars: 500
+    // Open links in reader mode (default off)
+    property bool openLinksInReader: false
 
     Component.onCompleted: {
         var obj = {}
@@ -59,6 +61,8 @@ ApplicationWindow {
                 appWindow.fontScale = Logic.conf['fontScale']
             if (typeof Logic.conf['fullUsernames'] !== "undefined")
                 appWindow.fullUsernames = Logic.conf['fullUsernames']
+            if (typeof Logic.conf['openLinksInReader'] !== "undefined")
+                appWindow.openLinksInReader = Logic.conf['openLinksInReader']
 
             var oldAccountParameters = ['api_user_token', 'instance', 'login']
             if (oldAccountParameters.every(function(el) { return el in Logic.conf })) {

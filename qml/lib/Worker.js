@@ -322,6 +322,14 @@ WorkerScript.onMessage = function(msg) {
         }
 
         if(msg.model && items.length) {
+            // Apply self-thread reordering for timeline views
+            // This makes threads read in chronological order (oldest to newest)
+            var isTimeline = msg.action.indexOf("timelines/") === 0 ||
+                             msg.action === "bookmarks"
+            if (isTimeline) {
+                items = reorderSelfThreads(items)
+            }
+
             // Pass gapIndex for fillgap mode
             var insertIdx = (msg.mode === "fillgap" && typeof msg.gapIndex === "number") ? msg.gapIndex : undefined
             addDataToModel(msg.model, msg.mode, items, insertIdx)
@@ -419,6 +427,76 @@ function findDuplicate(arr,val) {
             }
         }
         return false;
+}
+
+/**
+ * Reorder self-thread chains so they read in chronological order.
+ * Self-threads are posts where the author replies to themselves.
+ * API returns newest first, but threads should read oldest first.
+ */
+function reorderSelfThreads(items) {
+    if (!items || items.length < 2) return items
+
+    // Build lookup map: status_id -> item
+    var idToItem = {}
+    for (var i = 0; i < items.length; i++) {
+        idToItem[items[i]['status_id']] = items[i]
+    }
+
+    var result = []
+    var processed = {}
+
+    for (var i = 0; i < items.length; i++) {
+        var item = items[i]
+
+        if (processed[item['status_id']]) continue
+
+        // Is this part of a self-thread with parent in this batch?
+        if (item['is_self_thread'] && idToItem[item['status_in_reply_to_id']]) {
+            // Collect the chain by walking up the reply chain
+            var chain = []
+            var current = item
+
+            while (current && current['is_self_thread'] && idToItem[current['status_in_reply_to_id']]) {
+                chain.push(current)
+                processed[current['status_id']] = true
+                current = idToItem[current['status_in_reply_to_id']]
+            }
+
+            // Add root post (first in thread - not a self-reply or parent not in feed)
+            if (current && !processed[current['status_id']]) {
+                chain.push(current)
+                processed[current['status_id']] = true
+            }
+
+            // chain = [newest, ..., oldest] - reverse for reading order
+            chain.reverse()
+
+            // Add position metadata for UI
+            for (var j = 0; j < chain.length; j++) {
+                chain[j]['thread_position'] = j + 1
+                chain[j]['thread_total'] = chain.length
+                chain[j]['is_thread_start'] = (j === 0)
+                chain[j]['is_thread_end'] = (j === chain.length - 1)
+            }
+
+            // Add reordered chain to result
+            for (var k = 0; k < chain.length; k++) {
+                result.push(chain[k])
+            }
+        } else {
+            // Regular post - add as-is with no thread metadata
+            processed[item['status_id']] = true
+            item['thread_position'] = 0
+            item['thread_total'] = 0
+            item['is_thread_start'] = false
+            item['is_thread_end'] = false
+            result.push(item)
+        }
+    }
+
+    if (debug) console.log("reorderSelfThreads: " + items.length + " items -> " + result.length + " after reordering")
+    return result
 }
 
 /** Build knownIdsSet from existing model items for deduplication */
@@ -711,6 +789,18 @@ function parseToot (data) {
     item['status_in_reply_to_id'] = data["in_reply_to_id"]
     item['status_in_reply_to_account_id'] = data["in_reply_to_account_id"]
     item['status_reblog'] = data["reblog"] ? true : false
+
+    // Self-thread detection: author replying to their own post
+    item['is_self_thread'] = data["in_reply_to_account_id"] &&
+                             data["account"] &&
+                             data["in_reply_to_account_id"] === data["account"]["id"]
+
+    // Default thread metadata (may be updated by reorderSelfThreads)
+    item['thread_position'] = 0
+    item['thread_total'] = 0
+    item['is_thread_start'] = false
+    item['is_thread_end'] = false
+
     item['section'] = getDate(data["created_at"])
 
     /** If Toot is a Reblog */
@@ -727,6 +817,10 @@ function parseToot (data) {
         item['status_favourites_count'] = data["reblog"]["favourites_count"]
         item['status_in_reply_to_id'] = data["reblog"]["in_reply_to_id"]
         item['status_in_reply_to_account_id'] = data["reblog"]["in_reply_to_account_id"]
+        // Self-thread detection for reblogged post
+        item['is_self_thread'] = data["reblog"]["in_reply_to_account_id"] &&
+                                 data["reblog"]["account"] &&
+                                 data["reblog"]["in_reply_to_account_id"] === data["reblog"]["account"]["id"]
         item['content'] = data["reblog"]["content"]
         item = parseAccounts(item, "", data['reblog']["account"])
         item = parseAccounts(item, "reblog_", data["account"])

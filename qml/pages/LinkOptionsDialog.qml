@@ -3,10 +3,11 @@ import Sailfish.Silica 1.0
 
 Page {
     id: linkOptionsPage
-    property string url: ""
-    property bool openInReader: false
+    property string linkUrl: ""
 
-    signal optionSelected(bool useReader)
+    Component.onCompleted: {
+        console.log("LinkOptionsDialog: loaded with url = " + linkUrl)
+    }
 
     SilicaFlickable {
         anchors.fill: parent
@@ -18,51 +19,43 @@ Page {
             spacing: Theme.paddingLarge
 
             PageHeader {
-                title: qsTr("Open Link")
+                title: "Open Link"
             }
 
-            // URL display
             Label {
-                text: url
+                text: linkUrl
                 font.pixelSize: Theme.fontSizeExtraSmall
                 color: Theme.secondaryColor
                 wrapMode: Text.Wrap
                 width: parent.width - Theme.horizontalPageMargin * 2
                 x: Theme.horizontalPageMargin
-                maximumLineCount: 3
-                truncationMode: TruncationMode.Fade
             }
 
-            // Spacing
-            Item { width: 1; height: Theme.paddingLarge }
-
-            // Reader Mode button
             Button {
-                text: qsTr("Reader Mode")
+                text: "Reader Mode"
                 anchors.horizontalCenter: parent.horizontalCenter
                 onClicked: {
+                    console.log("Reader mode clicked")
                     pageStack.push(Qt.resolvedUrl("ReaderPage.qml"), {
-                        articleUrl: url
+                        articleUrl: linkUrl
                     })
                 }
             }
 
-            // Open in Browser button
             Button {
-                text: qsTr("Open in Browser")
+                text: "Open in Browser"
                 anchors.horizontalCenter: parent.horizontalCenter
                 onClicked: {
-                    Qt.openUrlExternally(url)
+                    Qt.openUrlExternally(linkUrl)
                     pageStack.pop()
                 }
             }
 
-            // Copy link button
             Button {
-                text: qsTr("Copy Link")
+                text: "Copy Link"
                 anchors.horizontalCenter: parent.horizontalCenter
                 onClicked: {
-                    Clipboard.text = url
+                    Clipboard.text = linkUrl
                     pageStack.pop()
                 }
             }
