@@ -229,6 +229,16 @@ SilicaListView {
             if (messageObject.updatedAll){
                 console.log(title + ": Got all, count=" + model.count + ", itemsCount=" + messageObject.itemsCount + ", resetting loadStarted")
                 if (model.count > 20) deDouble()
+
+                // Gap detection: check if there might be a gap after prepend
+                // Do this BEFORE setting loadStarted=false to prevent immediate re-trigger
+                if (messageObject.mode === "prepend" && messageObject.itemsCount > 0 && prePrependCount > 0) {
+                    checkForGap(messageObject.itemsCount)
+                }
+                // Reset gap tracking state
+                prePrependCount = 0
+                prePrependTopId = ""
+
                 loadStarted = false
 
                 // Detect end of timeline: API returned 0 items in append mode
@@ -240,14 +250,6 @@ SilicaListView {
                 if (messageObject.mode === "prepend" && messageObject.itemsCount > 0) {
                     reachedEnd = false
                 }
-
-                // Gap detection: check if there might be a gap after prepend
-                if (messageObject.mode === "prepend" && messageObject.itemsCount > 0 && prePrependCount > 0) {
-                    checkForGap(messageObject.itemsCount)
-                }
-                // Reset gap tracking state
-                prePrependCount = 0
-                prePrependTopId = ""
 
                 // Handle gap fill completion
                 if (messageObject.mode === "fillgap") {
