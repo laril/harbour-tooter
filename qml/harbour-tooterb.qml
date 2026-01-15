@@ -47,6 +47,9 @@ ApplicationWindow {
     // Open links in reader mode (default off)
     property bool openLinksInReader: false
 
+    // Signal emitted when user views the notifications tab
+    signal notificationsViewed()
+
     Component.onCompleted: {
         var obj = {}
         Logic.mediator.installTo(obj)

@@ -17,7 +17,7 @@ Page {
     property bool followed_by: false //otherwise ReferenceError ProfileHeader.qml
     property bool locked: false //otherwise ReferenceError ProfileHeader.qml
     property bool group: false //otherwise ReferenceError ProfileHeader.qml
-    property string type
+    property string type: ""
     property string username: ""
     property string headerTitle: ""
     property string suggestedUser: ""

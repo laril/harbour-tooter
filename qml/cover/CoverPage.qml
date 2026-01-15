@@ -105,6 +105,12 @@ CoverBackground {
         onCountChanged: if (coverPage.status !== PageStatus.Inactive) checkNotifications()
     }
 
+    // Clear notification count when user views notifications tab
+    Connections {
+        target: appWindow
+        onNotificationsViewed: markNotificationsRead()
+    }
+
     Label {
         text: "Tooter β"
         color: Theme.secondaryColor

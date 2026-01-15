@@ -283,6 +283,11 @@ Page {
         tlBookmarks.isCurrentTab = (index === 4)
         // index 5 is Search (not a MyList)
         tlTrending.isCurrentTab = (index === 6)
+
+        // Clear cover notification badge when viewing notifications tab
+        if (index === 1) {
+            appWindow.notificationsViewed()
+        }
     }
 
     SlideshowView {
