@@ -100,6 +100,9 @@ BackgroundItem {
         width: parent.width
         height: visible ? Theme.itemSizeLarge : 0
 
+        // Safe property access for gap_loading
+        property bool isGapLoading: model && typeof model.gap_loading !== "undefined" && model.gap_loading === true
+
         Rectangle {
             anchors.fill: parent
             color: Theme.highlightDimmerColor
@@ -113,20 +116,20 @@ BackgroundItem {
             BusyIndicator {
                 id: gapBusy
                 size: BusyIndicatorSize.Small
-                running: model.gap_loading === true
+                running: gapLoader.isGapLoading
                 visible: running
                 anchors.verticalCenter: parent.verticalCenter
             }
 
             Label {
-                text: model.gap_loading === true ? qsTr("Loading...") : qsTr("Load more")
+                text: gapLoader.isGapLoading ? qsTr("Loading...") : qsTr("Load more")
                 color: Theme.highlightColor
                 font.pixelSize: Theme.fontSizeMedium
                 anchors.verticalCenter: parent.verticalCenter
             }
 
             Image {
-                visible: model.gap_loading !== true
+                visible: !gapLoader.isGapLoading
                 source: "image://theme/icon-m-down"
                 width: Theme.iconSizeSmall
                 height: width
@@ -136,10 +139,14 @@ BackgroundItem {
 
         MouseArea {
             anchors.fill: parent
-            enabled: model.gap_loading !== true
+            enabled: !gapLoader.isGapLoading
             onClicked: {
                 console.log("Gap clicked at index " + index)
-                myList.loadGap(index)
+                if (typeof myList !== "undefined" && myList && typeof myList.loadGap === "function") {
+                    myList.loadGap(index)
+                } else {
+                    console.log("Error: myList.loadGap not available")
+                }
             }
         }
     }
